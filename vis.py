@@ -25,14 +25,19 @@ def plot(ax, kite, u, w):
 
     # draw a line at the kite center  in the direction of e_t
     e_t = np.array([o, 10 * kite.e_t(x, u, w)]) + kite.p(x)
-    ax.plot3D(*e_t.T)
+    ax.plot3D(*e_t.T, label='e_t')
 
     # draw a line at the kite center  in the direction of e_t
     e_l = np.array([o, 10 * kite.e_l(x, u, w)]) + kite.p(x)
-    ax.plot3D(*e_l.T)
+    ax.plot3D(*e_l.T, label='e_l')
+
+    # plot the axes
+    for v, c in zip(kite.get_string_basis(x), ['red', 'green', 'blue']):
+        ax.plot3D(*np.array([o,10*v]).T, color=c, alpha=0.5)
 
     # draw a dot at the origin
     ax.scatter3D(*o)
+    plt.legend()
 
 def update(num, ax, kite, U, w):
     # get the command
