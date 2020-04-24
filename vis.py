@@ -55,7 +55,7 @@ def update(t, ax, X, U, W):
     dt = 0.05 # TODO: Make this a parameter?
     ax.set_title('t = {:8.4f}"'.format(t*dt))
 
-def animate_trajectory(X, U, W):
+def animate_trajectory(X, U, W, save_file=None):
     T = X.shape[0]
 
     assert U.shape[0] == T
@@ -68,11 +68,13 @@ def animate_trajectory(X, U, W):
     line_ani = animation.FuncAnimation(fig, update, frames=T, fargs=(ax, X, U, W),
                                        interval=33, blit=False)
 
-    Writer = animation.writers['ffmpeg']
-    writer = Writer(fps=15, metadata=dict(artist='Me'), bitrate=1800)
+    if save_file is None:
+        plt.show()
+    else:
+        Writer = animation.writers['ffmpeg']
+        writer = Writer(fps=15, metadata=dict(artist='Me'), bitrate=1800)
 
-    line_ani.save('im.mp4', writer=writer)
-    #plt.show()
+        line_ani.save(save_file, writer=writer)
 
 def main():
     T = 100 # how many frames
