@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 from drake_kite import DrakeKite
 from pydrake.all import eq, MathematicalProgram, Solve, Variable, SnoptSolver
 from simple_kite_dynamics import Kite
@@ -57,19 +58,31 @@ for t in range(T):
     # prog.AddConstraint(eq(q[t+1], q[t] + h[t] * qd[t+1])) # backward euler
     # prog.AddConstraint(eq(qd[t+1], qd[t] + h[t] * qdd[t])) # forward euler
 
-    # args = np.concatenate((q[t+1], qd[t+1], qdd[t], u[t]))
-    # prog.AddConstraint(dynamics, lb=[0]*nq*2, ub=[0]*nq*2, vars=args)
-
 for t in range(T+1):
-    prog.AddLinearConstraint(q[t,1] >= 0) # stay off the ground
-    prog.AddLinearConstraint(q[t,1] <= np.pi/2) # behind the anchor
-    prog.AddLinearConstraint(q[t,0] <= np.pi/2) # behind the anchor
-    prog.AddLinearConstraint(q[t,1] >= -np.pi/2) # behind the anchor
+
+    #prog.AddLinearConstraint(q[t,1] >= 0) # stay off the ground
+    #prog.AddLinearConstraint(q[t,1] <= np.pi/2) # behind the anchor
+    #prog.AddLinearConstraint(q[t,0] <= np.pi/2) # behind the anchor
+    #prog.AddLinearConstraint(q[t,1] >= -np.pi/2) # behind the anchor
+
+    prog.AddLinearConstraint(q[t,0] <= np.radians(90)) # stay off the ground
+    prog.AddLinearConstraint(q[t,0] >= np.radians(2)) # stay off the ground
+
+    #prog.AddLinearConstraint(q[t,1] <= np.pi/2) # behind the anchor
+    #prog.AddLinearConstraint(q[t,0] <= np.pi/2) # behind the anchor
+    #prog.AddLinearConstraint(q[t,1] >= -np.pi/2) # behind the anchor
 
 
 # mirror initial and final configuration to force a loop
-prog.AddLinearConstraint(eq(q[0], - q[-1]))
-prog.AddLinearConstraint(eq(qd[0], - qd[-1]))
+#prog.AddLinearConstraint(eq(q[0], - q[-1]))
+#prog.AddLinearConstraint(eq(qd[0], - qd[-1]))
+
+prog.AddLinearConstraint(eq(q[0], q[-1]))
+prog.AddLinearConstraint(eq(qd[0], qd[-1]))
+
+# make it find a figure 8
+prog.AddLinearConstraint(q[T//4, 1] >= np.radians(20))
+prog.AddLinearConstraint(q[3*T//4, 1] <= np.radians(-20))
 
 # penalize large control inputs
 for t in range(T):
@@ -88,6 +101,30 @@ prog.SetDecisionVariableValueInVector(h, [h_guess] * T, initial_guess)
 q_guess = np.zeros([T+1,nq])
 qd_guess = np.zeros([T+1,nq])
 qdd_guess = np.zeros([T+1,nq])
+
+#q_guess = np.random.random(q_guess.shape)
+#qd_guess = np.random.random(qd_guess.shape)
+#qdd_guess = np.random.random(qdd_guess.shape)
+
+q_guess[0] = np.array([np.radians(60), np.radians(0)])
+q_guess[5] = np.array([np.radians(70), np.radians(30)])
+q_guess[10] = np.array([np.radians(60), np.radians(40)])
+q_guess[15] = np.array([np.radians(45), np.radians(25)])
+q_guess[20] = np.array([np.radians(60), np.radians(0)])
+q_guess[25] = np.array([np.radians(70), np.radians(-35)])
+q_guess[30] = np.array([np.radians(55), np.radians(-45)])
+q_guess[35] = np.array([np.radians(50), np.radians(-30)])
+q_guess[39] = np.array([np.radians(60), np.radians(0)])
+
+q_guess[0:5] = np.linspace(q_guess[0], q_guess[5], 5)
+q_guess[5:10] = np.linspace(q_guess[5], q_guess[10], 5)
+q_guess[10:15] = np.linspace(q_guess[10], q_guess[15], 5)
+q_guess[15:20] = np.linspace(q_guess[15], q_guess[20], 5)
+q_guess[20:25] = np.linspace(q_guess[20], q_guess[25], 5)
+q_guess[25:30] = np.linspace(q_guess[25], q_guess[30], 5)
+q_guess[30:35] = np.linspace(q_guess[30], q_guess[35], 5)
+q_guess[35:39] = np.linspace(q_guess[35], q_guess[39], 4)
+
 
 # a = np.linspace(0, np.pi*2, T+1)
 # q_guess = np.stack([np.sin(a), np.cos(a)+2]).T*np.pi/8
@@ -109,6 +146,8 @@ result = solver.Solve(prog, initial_guess)
 
 # ensure solution is found
 print(f'Solution found? {result.is_success()}.')
+print(result.get_solution_result())
+print(result.get_solver_details().info)
 
 # get optimal solution
 h_opt = result.GetSolution(h)
@@ -121,7 +160,11 @@ u_opt = result.GetSolution(u)
 x_opt = np.hstack((q_opt, qd_opt)).T
 
 from matplotlib import pyplot as plt
-plt.plot(*q_guess.T, label='Guess')
-plt.plot(*q_opt.T, label='Opt')
+x,y = q_guess.T
+#plt.plot(*q_guess.T, label='Guess')
+plt.plot(np.degrees(y),np.degrees(x), label='Guess')
+#plt.plot(*q_opt.T, label='Opt')
+x,y = q_opt.T
+plt.plot(np.degrees(y), np.degrees(x), label='Opt')
 plt.legend()
 plt.show()
