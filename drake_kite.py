@@ -12,7 +12,7 @@ class DrakeKite(LeafSystem):
         self.mass = 1  # kg
         self.g = 9.81  # m/s^2
         self.kite = Kite() if kite is None else kite
-        self.w = np.array([10, 0, 0])
+        self.w = np.array([6, 0, 0])
         
         self.DeclareContinuousState(4)
         self.DeclareVectorInputPort("u", BasicVector(1))

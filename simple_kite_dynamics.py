@@ -134,7 +134,7 @@ class Kite:
         w_e =  w - self.pdot(x)
         return 1/2 * self.rho * (w_e.T@w_e) * self.A * self.C_d
 
-    def f(self, x, u, w=np.array([1,0,0])):
+    def f(self, x, u, w=np.array([6,0,0])):
         """ dynamics of the kite
         """
         theta, phi, thetadot, phidot = x

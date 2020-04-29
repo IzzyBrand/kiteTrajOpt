@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 from matplotlib import pyplot as plt
 import numpy as np
 
@@ -8,6 +10,7 @@ from pydrake.systems.primitives import LogOutput
 from pydrake.systems.drawing import plot_system_graphviz
 
 from drake_kite import DrakeKite
+from ol_control import OlControl
 from vis import animate_trajectory
 
 
@@ -20,7 +23,9 @@ builder = DiagramBuilder()
 kite_system = builder.AddSystem(DrakeKite())
 kite_system.set_name("kite")
 
-controller = builder.AddSystem(const_u_sys)
+#controller = builder.AddSystem(const_u_sys)
+olc = OlControl()
+controller = builder.AddSystem(olc)
 controller.set_name("controller")
 
 builder.Connect(controller.get_output_port(0), kite_system.get_input_port(0))
@@ -39,10 +44,10 @@ diagram.set_name("diagram")
 # plt.show()
 
 
-theta = .01
-phi = np.pi/4
-thetadot = 0
-phidot = 0
+theta = 1.04719
+phi = 0.0
+thetadot = 0.33634
+phidot = 0.46218
 x0 = [theta, phi, thetadot, phidot]
 
 context = diagram.CreateDefaultContext()
@@ -50,15 +55,18 @@ kite_context = diagram.GetMutableSubsystemContext(kite_system, context)
 kite_context.SetContinuousState(x0)
 
 controller_context = diagram.GetMutableSubsystemContext(controller, context)
-controller_context.SetContinuousState([0])
+#controller_context.SetContinuousState([0])
+controller_context.SetDiscreteState([0])
 
 simulator = Simulator(diagram, context)
 simulator.AdvanceTo(10)
 
-# plt.figure()
-# plt.plot(logger_kite.sample_times(), logger_kite.data().transpose())
-# plt.legend(['theta', 'phi', 'thetadot', 'phidot'])
-# plt.show()
+plt.figure()
+plt.plot(logger_kite.sample_times(), logger_kite.data().transpose())
+plt.legend(['theta', 'phi', 'thetadot', 'phidot'])
+plt.figure()
+plt.plot(olc.u)
+plt.show()
 
 (_, T) = logger_kite.data().shape
 W = np.ones([T,3]) * np.array([6, 0, 0])[None,:]

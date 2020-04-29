@@ -3,6 +3,7 @@ from drake_kite import DrakeKite
 from pydrake.all import eq, MathematicalProgram, Solve, Variable, SnoptSolver
 from simple_kite_dynamics import Kite
 import numpy as np
+from matplotlib import pyplot as plt
 ###############################################################################
 # Constants
 ###############################################################################
@@ -65,12 +66,17 @@ for t in range(T+1):
     #prog.AddLinearConstraint(q[t,0] <= np.pi/2) # behind the anchor
     #prog.AddLinearConstraint(q[t,1] >= -np.pi/2) # behind the anchor
 
-    prog.AddLinearConstraint(q[t,0] <= np.radians(90)) # stay off the ground
-    prog.AddLinearConstraint(q[t,0] >= np.radians(2)) # stay off the ground
+    prog.AddLinearConstraint(q[t,0] <= (np.pi / 2)) # stay off the ground
+    #prog.AddLinearConstraint(q[t,0] >= (-np.pi / 2)) # stay off the ground
+
+    prog.AddLinearConstraint(q[t,0] <= np.radians(75)) # stay off the ground
+
+    #prog.AddLinearConstraint(q[t,0] >= np.radians(2)) # stay out of vertical singularity
 
     #prog.AddLinearConstraint(q[t,1] <= np.pi/2) # behind the anchor
     #prog.AddLinearConstraint(q[t,0] <= np.pi/2) # behind the anchor
     #prog.AddLinearConstraint(q[t,1] >= -np.pi/2) # behind the anchor
+
 
 
 # mirror initial and final configuration to force a loop
@@ -81,12 +87,15 @@ prog.AddLinearConstraint(eq(q[0], q[-1]))
 prog.AddLinearConstraint(eq(qd[0], qd[-1]))
 
 # make it find a figure 8
-prog.AddLinearConstraint(q[T//4, 1] >= np.radians(20))
-prog.AddLinearConstraint(q[3*T//4, 1] <= np.radians(-20))
+#prog.AddLinearConstraint(q[T//4, 1] >= np.radians(20))
+#prog.AddLinearConstraint(q[3*T//4, 1] <= np.radians(-20))
+#prog.AddLinearConstraint(q[0, 0] >= np.radians(30))
 
 # penalize large control inputs
 for t in range(T):
     prog.AddQuadraticCost(u[t].dot(u[t]))
+    if t < T - 1:
+        prog.AddQuadraticCost( (u[t+1] - u[t]).dot(u[t+1] - u[t]))
 ###############################################################################
 # Initial guess
 ###############################################################################
@@ -124,6 +133,29 @@ q_guess[20:25] = np.linspace(q_guess[20], q_guess[25], 5)
 q_guess[25:30] = np.linspace(q_guess[25], q_guess[30], 5)
 q_guess[30:35] = np.linspace(q_guess[30], q_guess[35], 5)
 q_guess[35:39] = np.linspace(q_guess[35], q_guess[39], 4)
+q_guess[40] = q_guess[39]
+
+
+qd_guess[0] = np.array([np.radians(25), np.radians(25)])
+qd_guess[5] = np.array([np.radians(0), np.radians(25)])
+qd_guess[10] = np.array([np.radians(-25), np.radians(0)])
+qd_guess[15] = np.array([np.radians(0), np.radians(-25)])
+qd_guess[20] = np.array([np.radians(25), np.radians(-25)])
+qd_guess[25] = np.array([np.radians(0), np.radians(-25)])
+qd_guess[30] = np.array([np.radians(-25), np.radians(0)])
+qd_guess[35] = np.array([np.radians(0), np.radians(25)])
+qd_guess[39] = np.array([np.radians(25), np.radians(25)])
+
+qd_guess[0:5] =   np.linspace(qd_guess[0],  qd_guess[5], 5)
+qd_guess[5:10] =  np.linspace(qd_guess[5],  qd_guess[10], 5)
+qd_guess[10:15] = np.linspace(qd_guess[10], qd_guess[15], 5)
+qd_guess[15:20] = np.linspace(qd_guess[15], qd_guess[20], 5)
+qd_guess[20:25] = np.linspace(qd_guess[20], qd_guess[25], 5)
+qd_guess[25:30] = np.linspace(qd_guess[25], qd_guess[30], 5)
+qd_guess[30:35] = np.linspace(qd_guess[30], qd_guess[35], 5)
+qd_guess[35:39] = np.linspace(qd_guess[35], qd_guess[39], 4)
+qd_guess[40] = qd_guess[39]
+
 
 
 # a = np.linspace(0, np.pi*2, T+1)
@@ -134,7 +166,10 @@ prog.SetDecisionVariableValueInVector(q, q_guess, initial_guess)
 prog.SetDecisionVariableValueInVector(qd, qd_guess, initial_guess)
 prog.SetDecisionVariableValueInVector(qdd, qdd_guess[:-1], initial_guess)
 
-u_guess = np.zeros([T,nu])
+#u_guess = np.zeros([T,nu])
+u_guess = np.radians(10*np.sin(np.linspace(0, 2*np.pi, T)))
+plt.plot(u_guess)
+plt.show()
 prog.SetDecisionVariableValueInVector(u, u_guess, initial_guess)
 
 ###############################################################################
@@ -159,12 +194,43 @@ u_opt = result.GetSolution(u)
 # stack states
 x_opt = np.hstack((q_opt, qd_opt)).T
 
-from matplotlib import pyplot as plt
+
 x,y = q_guess.T
+print('Theta, Phi:', x[0], y[0])
 #plt.plot(*q_guess.T, label='Guess')
 plt.plot(np.degrees(y),np.degrees(x), label='Guess')
 #plt.plot(*q_opt.T, label='Opt')
 x,y = q_opt.T
 plt.plot(np.degrees(y), np.degrees(x), label='Opt')
 plt.legend()
+plt.figure()
+plt.plot(np.degrees(u_opt))
+
+x,y = qd_opt.T
+print('Thetadot, Phidot:', x[0], y[0])
+
+
+print(np.cumsum(h_opt), u_opt)
+u_interp = np.interp(np.linspace(0, np.sum(h_opt[:-1]), 5*(T-1)), np.concatenate((np.array([0]), np.cumsum(h_opt)[:-1])), u_opt)
+np.save('fig8_openloop_control.npy', u_interp)
+np.save('fig8_openloop_times.npy', np.arange(len(u_interp)) * np.sum(h_opt) / len(u_interp))
+print(u_interp)
+plt.plot(np.arange(len(u_interp))/5, np.degrees(u_interp))
+plt.figure()
+plt.plot(np.arange(len(u_interp)) * np.sum(h_opt) / len(u_interp), np.degrees(u_interp))
+
+plt.figure()
+t, p = q_opt.T
+plt.title('Theta, Phi')
+plt.plot(t)
+plt.plot(p)
+plt.legend(['Theta', 'Phi'])
+
+plt.figure()
+t, p = qd_opt.T
+plt.title('dot Theta, Phi')
+plt.plot(t)
+plt.plot(p)
+plt.legend(['dTheta', 'dPhi'])
+
 plt.show()
