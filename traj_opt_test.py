@@ -87,12 +87,17 @@ prog.AddLinearConstraint(eq(qd[0], qd[-1]))
 for t in range(T):
     prog.AddLinearConstraint(u[t,1] <= 0) # you can't push the kite
     prog.AddLinearConstraint(u[t,1] >= -7) # limit generator torque
-    prog.AddQuadraticCost(u[t, 0]*u[t, 0]) # limit roll control
+    prog.AddLinearConstraint(u[t,0] <= np.degrees(20))
+    prog.AddLinearConstraint(u[t,0] >= -np.degrees(20))
+
+    # prog.AddQuadraticCost(u[t, 0]*u[t, 0]) # limit roll control
+    # control smoothing constraint
     if t < T - 1:
         prog.AddQuadraticCost( (u[t+1, 0] - u[t, 0])*(u[t+1, 0] - u[t, 0])) 
+        prog.AddQuadraticCost( (u[t+1, 1] - u[t, 1])*(u[t+1, 1] - u[t, 1])) 
 
-for t in range(T+1):
-    prog.AddQuadraticCost(0.01*(q[t,2] - 50)**2) # try to keep the kite at 50m
+for t in range(T):
+    prog.AddQuadraticCost(qd[t,2]*u[t,1]) # maximize power
 ###############################################################################
 # Initial guess
 ###############################################################################
