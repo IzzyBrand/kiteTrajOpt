@@ -48,6 +48,8 @@ class Kite:
         return e_l
 
     def e_t(self, x, u, w):
+        roll, _ = u
+
         # calculate the kite airspeed vector
         w_e =  w - self.pdot(x)
 
@@ -64,13 +66,13 @@ class Kite:
         e_o = np.cross(e_r, e_w)
 
         # get the angle of the kite (defined by airspeed)????
-        nu = np.arcsin(np.dot(w_e, e_r)/w_p_e_norm*np.tan(u))
+        nu = np.arcsin(np.dot(w_e, e_r)/w_p_e_norm*np.tan(roll))
 
         # the basis in the plane of the kite pointing sideways (transverse)
         # accounting for kite roll
-        e_t = e_w*(-np.cos(u)*np.sin(nu)) +\
-            e_o*(np.cos(u)*np.cos(nu)) +\
-            e_r*np.sin(u)
+        e_t = e_w*(-np.cos(roll)*np.sin(nu)) +\
+            e_o*(np.cos(roll)*np.cos(nu)) +\
+            e_r*np.sin(roll)
 
         return e_t
 
@@ -137,14 +139,21 @@ class Kite:
         """ dynamics of the kite
         """
         theta, phi, r, thetadot, phidot, rdot = x
+        roll, torque = u
     
         thetadotdot = self.F_theta_aer(x, u, w)/(r*self.m) +\
             np.sin(theta)*self.g/r +\
-            np.sin(theta)*np.cos(theta)*phidot**2
+            np.sin(theta)*np.cos(theta)*phidot**2 -\
+            2*rdot*thetadot/r
 
         phidotdot = self.F_phi_aer(x, u, w)/(r*self.m) -\
-            2/np.tan(theta)*phidot*thetadot
+            2/np.tan(theta)*phidot*thetadot -\
+            2*rdot*phidot/r
 
-        xdot = np.array([thetadot, phidot, thetadotdot, phidotdot])
+        rdotdot = torque/self.m +\
+            r * thetadot**2 +\
+            r * np.sin(theta)**2 * phidot**2
+
+        xdot = np.array([thetadot, phidot, rdot, thetadotdot, phidotdot, rdotdot])
 
         return xdot
