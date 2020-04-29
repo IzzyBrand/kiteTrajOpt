@@ -66,7 +66,7 @@ for t in range(T+1):
     #prog.AddLinearConstraint(q[t,0] <= np.pi/2) # behind the anchor
     #prog.AddLinearConstraint(q[t,1] >= -np.pi/2) # behind the anchor
 
-    prog.AddLinearConstraint(q[t,0] <= (np.pi / 2)) # stay off the ground
+    #prog.AddLinearConstraint(q[t,0] <= (np.pi / 2)) # stay off the ground
     #prog.AddLinearConstraint(q[t,0] >= (-np.pi / 2)) # stay off the ground
 
     prog.AddLinearConstraint(q[t,0] <= np.radians(75)) # stay off the ground
@@ -79,23 +79,14 @@ for t in range(T+1):
 
 
 
-# mirror initial and final configuration to force a loop
-#prog.AddLinearConstraint(eq(q[0], - q[-1]))
-#prog.AddLinearConstraint(eq(qd[0], - qd[-1]))
-
 prog.AddLinearConstraint(eq(q[0], q[-1]))
 prog.AddLinearConstraint(eq(qd[0], qd[-1]))
 
-# make it find a figure 8
-#prog.AddLinearConstraint(q[T//4, 1] >= np.radians(20))
-#prog.AddLinearConstraint(q[3*T//4, 1] <= np.radians(-20))
-#prog.AddLinearConstraint(q[0, 0] >= np.radians(30))
-
-# penalize large control inputs
+# penalize large control inputs and nonsmooth control inputs
 for t in range(T):
     prog.AddQuadraticCost(u[t].dot(u[t]))
     if t < T - 1:
-        prog.AddQuadraticCost( (u[t+1] - u[t]).dot(u[t+1] - u[t]))
+        prog.AddQuadraticCost( (u[t+1] - u[t]).dot(u[t+1] - u[t])) 
 ###############################################################################
 # Initial guess
 ###############################################################################
@@ -115,6 +106,10 @@ qdd_guess = np.zeros([T+1,nq])
 #qd_guess = np.random.random(qd_guess.shape)
 #qdd_guess = np.random.random(qdd_guess.shape)
 
+# Initial guess for a figure-8
+# First, chooses initial conditions for 8 time steps
+# Then, interpolate linearly
+# There's probably a better way to do this.
 q_guess[0] = np.array([np.radians(60), np.radians(0)])
 q_guess[5] = np.array([np.radians(70), np.radians(30)])
 q_guess[10] = np.array([np.radians(60), np.radians(40)])
@@ -168,7 +163,6 @@ prog.SetDecisionVariableValueInVector(qdd, qdd_guess[:-1], initial_guess)
 
 #u_guess = np.zeros([T,nu])
 u_guess = np.radians(10*np.sin(np.linspace(0, 2*np.pi, T)))
-plt.plot(u_guess)
 plt.show()
 prog.SetDecisionVariableValueInVector(u, u_guess, initial_guess)
 
@@ -203,12 +197,14 @@ plt.plot(np.degrees(y),np.degrees(x), label='Guess')
 x,y = q_opt.T
 plt.plot(np.degrees(y), np.degrees(x), label='Opt')
 plt.legend()
+plt.xlabel('phi')
+plt.ylabel('theta')
+
 plt.figure()
 plt.plot(np.degrees(u_opt))
 
 x,y = qd_opt.T
 print('Thetadot, Phidot:', x[0], y[0])
-
 
 print(np.cumsum(h_opt), u_opt)
 u_interp = np.interp(np.linspace(0, np.sum(h_opt[:-1]), 5*(T-1)), np.concatenate((np.array([0]), np.cumsum(h_opt)[:-1])), u_opt)
@@ -216,6 +212,9 @@ np.save('fig8_openloop_control.npy', u_interp)
 np.save('fig8_openloop_times.npy', np.arange(len(u_interp)) * np.sum(h_opt) / len(u_interp))
 print(u_interp)
 plt.plot(np.arange(len(u_interp))/5, np.degrees(u_interp))
+
+plt.xlabel('t')
+plt.ylabel('u')
 plt.figure()
 plt.plot(np.arange(len(u_interp)) * np.sum(h_opt) / len(u_interp), np.degrees(u_interp))
 
@@ -225,6 +224,8 @@ plt.title('Theta, Phi')
 plt.plot(t)
 plt.plot(p)
 plt.legend(['Theta', 'Phi'])
+plt.xlabel('Time')
+plt.ylabel('Radians')
 
 plt.figure()
 t, p = qd_opt.T
@@ -232,5 +233,7 @@ plt.title('dot Theta, Phi')
 plt.plot(t)
 plt.plot(p)
 plt.legend(['dTheta', 'dPhi'])
+plt.xlabel('Time')
+plt.ylabel('Radians / s')
 
 plt.show()
