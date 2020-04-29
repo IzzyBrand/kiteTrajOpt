@@ -12,7 +12,7 @@ class Kite:
     def p(self, x):
         """ get the kite position in global frame
         """
-        theta, phi, r _, _, _ = x
+        theta, phi, r, _, _, _ = x
 
         s_t = np.sin(theta)
         c_t = np.cos(theta)
