@@ -88,7 +88,7 @@ class Kite:
         e_theta = np.array([c_t*c_p, c_t*s_p, -s_t])
         e_phi = np.array([-s_p, c_p, 0])
         e_r = np.array([s_t*c_p, s_t*s_p, c_t])
-    
+
         return np.array([e_theta, e_phi, e_r])
 
     def F_theta_aer(self, x, u, w):
@@ -106,7 +106,7 @@ class Kite:
         F_theta_aer = F_l * (np.cross(e_l, e_t).T @ e_theta) +\
             F_d * (e_l.T @ e_theta)
         return F_theta_aer
-    
+
     def F_phi_aer(self, x, u, w):
         """ the total aerodynamic force on elevation
         """
@@ -140,7 +140,7 @@ class Kite:
         """
         theta, phi, r, thetadot, phidot, rdot = x
         roll, torque = u
-    
+
         thetadotdot = self.F_theta_aer(x, u, w)/(r*self.m) +\
             np.sin(theta)*self.g/r +\
             np.sin(theta)*np.cos(theta)*phidot**2 -\

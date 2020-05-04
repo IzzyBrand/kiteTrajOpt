@@ -71,6 +71,8 @@ for t in range(T+1):
 
     prog.AddLinearConstraint(q[t,0] <= np.radians(75)) # stay off the ground
     # prog.AddLinearConstraint(q[t,2] == 50) # keep the kite at 50m
+    prog.AddLinearConstraint(q[t,2] >= 40)
+    prog.AddLinearConstraint(q[t,2] <= 60)
 
     #prog.AddLinearConstraint(q[t,0] >= np.radians(2)) # stay out of vertical singularity
 
@@ -78,8 +80,7 @@ for t in range(T+1):
     #prog.AddLinearConstraint(q[t,0] <= np.pi/2) # behind the anchor
     #prog.AddLinearConstraint(q[t,1] >= -np.pi/2) # behind the anchor
 
-
-
+# the trajectory must be a closed circuit
 prog.AddLinearConstraint(eq(q[0], q[-1]))
 prog.AddLinearConstraint(eq(qd[0], qd[-1]))
 
@@ -90,14 +91,16 @@ for t in range(T):
     prog.AddLinearConstraint(u[t,0] <= np.degrees(20))
     prog.AddLinearConstraint(u[t,0] >= -np.degrees(20))
 
-    # prog.AddQuadraticCost(u[t, 0]*u[t, 0]) # limit roll control
+    # prog.AddQuadraticCost(u[t, 0]*u[t, 0]) # penalize roll inputs
+
     # control smoothing constraint
     if t < T - 1:
-        prog.AddQuadraticCost( (u[t+1, 0] - u[t, 0])*(u[t+1, 0] - u[t, 0])) 
-        prog.AddQuadraticCost( (u[t+1, 1] - u[t, 1])*(u[t+1, 1] - u[t, 1])) 
+        prog.AddQuadraticCost((u[t+1, 0] - u[t, 0])*(u[t+1, 0] - u[t, 0]))
+        prog.AddQuadraticCost((u[t+1, 1] - u[t, 1])*(u[t+1, 1] - u[t, 1]))
 
-for t in range(T):
-    prog.AddQuadraticCost(qd[t,2]*u[t,1]) # maximize power
+# for t in range(T):
+#     prog.AddQuadraticCost(qd[t,2]*u[t,1]) # maximize power
+prog.AddCost(qd[:-1,2].dot(u[:,1]))
 ###############################################################################
 # Initial guess
 ###############################################################################
@@ -105,13 +108,14 @@ for t in range(T):
 initial_guess = np.empty(prog.num_vars())
 
 # initial guess for the time step
-h_guess = h_max
-prog.SetDecisionVariableValueInVector(h, [h_guess] * T, initial_guess)
+# h_guess = [h_max]*T
+h_guess = np.load(f'data/h_opt_{T}.npy')
+prog.SetDecisionVariableValueInVector(h, h_guess, initial_guess)
 
 
-q_guess = np.zeros([T+1,nq])
-qd_guess = np.zeros([T+1,nq])
-qdd_guess = np.zeros([T+1,nq])
+# q_guess = np.zeros([T+1,nq])
+# qd_guess = np.zeros([T+1,nq])
+# qdd_guess = np.zeros([T+1,nq])
 
 #q_guess = np.random.random(q_guess.shape)
 #qd_guess = np.random.random(qd_guess.shape)
@@ -121,47 +125,50 @@ qdd_guess = np.zeros([T+1,nq])
 # First, chooses initial conditions for 8 time steps
 # Then, interpolate linearly
 # There's probably a better way to do this.
-q_guess[0] = np.array([np.radians(60), np.radians(0), 50])
-q_guess[5] = np.array([np.radians(70), np.radians(30), 50])
-q_guess[10] = np.array([np.radians(60), np.radians(40), 50])
-q_guess[15] = np.array([np.radians(45), np.radians(25), 50])
-q_guess[20] = np.array([np.radians(60), np.radians(0), 50])
-q_guess[25] = np.array([np.radians(70), np.radians(-35), 50])
-q_guess[30] = np.array([np.radians(55), np.radians(-45), 50])
-q_guess[35] = np.array([np.radians(50), np.radians(-30), 50])
-q_guess[39] = np.array([np.radians(60), np.radians(0), 50])
+# q_guess[0] = np.array([np.radians(60), np.radians(0), 50])
+# q_guess[5] = np.array([np.radians(70), np.radians(30), 50])
+# q_guess[10] = np.array([np.radians(60), np.radians(40), 50])
+# q_guess[15] = np.array([np.radians(45), np.radians(25), 50])
+# q_guess[20] = np.array([np.radians(60), np.radians(0), 50])
+# q_guess[25] = np.array([np.radians(70), np.radians(-35), 50])
+# q_guess[30] = np.array([np.radians(55), np.radians(-45), 50])
+# q_guess[35] = np.array([np.radians(50), np.radians(-30), 50])
+# q_guess[39] = np.array([np.radians(60), np.radians(0), 50])
 
-q_guess[0:5] = np.linspace(q_guess[0], q_guess[5], 5)
-q_guess[5:10] = np.linspace(q_guess[5], q_guess[10], 5)
-q_guess[10:15] = np.linspace(q_guess[10], q_guess[15], 5)
-q_guess[15:20] = np.linspace(q_guess[15], q_guess[20], 5)
-q_guess[20:25] = np.linspace(q_guess[20], q_guess[25], 5)
-q_guess[25:30] = np.linspace(q_guess[25], q_guess[30], 5)
-q_guess[30:35] = np.linspace(q_guess[30], q_guess[35], 5)
-q_guess[35:39] = np.linspace(q_guess[35], q_guess[39], 4)
-q_guess[40] = q_guess[39]
+# q_guess[0:5] = np.linspace(q_guess[0], q_guess[5], 5)
+# q_guess[5:10] = np.linspace(q_guess[5], q_guess[10], 5)
+# q_guess[10:15] = np.linspace(q_guess[10], q_guess[15], 5)
+# q_guess[15:20] = np.linspace(q_guess[15], q_guess[20], 5)
+# q_guess[20:25] = np.linspace(q_guess[20], q_guess[25], 5)
+# q_guess[25:30] = np.linspace(q_guess[25], q_guess[30], 5)
+# q_guess[30:35] = np.linspace(q_guess[30], q_guess[35], 5)
+# q_guess[35:39] = np.linspace(q_guess[35], q_guess[39], 4)
+# q_guess[40] = q_guess[39]
 
 
-qd_guess[0] = np.array([np.radians(25), np.radians(25), 0])
-qd_guess[5] = np.array([np.radians(0), np.radians(25), 0])
-qd_guess[10] = np.array([np.radians(-25), np.radians(0), 0])
-qd_guess[15] = np.array([np.radians(0), np.radians(-25), 0])
-qd_guess[20] = np.array([np.radians(25), np.radians(-25), 0])
-qd_guess[25] = np.array([np.radians(0), np.radians(-25), 0])
-qd_guess[30] = np.array([np.radians(-25), np.radians(0), 0])
-qd_guess[35] = np.array([np.radians(0), np.radians(25), 0])
-qd_guess[39] = np.array([np.radians(25), np.radians(25), 0])
+# qd_guess[0] = np.array([np.radians(25), np.radians(25), 0])
+# qd_guess[5] = np.array([np.radians(0), np.radians(25), 0])
+# qd_guess[10] = np.array([np.radians(-25), np.radians(0), 0])
+# qd_guess[15] = np.array([np.radians(0), np.radians(-25), 0])
+# qd_guess[20] = np.array([np.radians(25), np.radians(-25), 0])
+# qd_guess[25] = np.array([np.radians(0), np.radians(-25), 0])
+# qd_guess[30] = np.array([np.radians(-25), np.radians(0), 0])
+# qd_guess[35] = np.array([np.radians(0), np.radians(25), 0])
+# qd_guess[39] = np.array([np.radians(25), np.radians(25), 0])
 
-qd_guess[0:5] =   np.linspace(qd_guess[0],  qd_guess[5], 5)
-qd_guess[5:10] =  np.linspace(qd_guess[5],  qd_guess[10], 5)
-qd_guess[10:15] = np.linspace(qd_guess[10], qd_guess[15], 5)
-qd_guess[15:20] = np.linspace(qd_guess[15], qd_guess[20], 5)
-qd_guess[20:25] = np.linspace(qd_guess[20], qd_guess[25], 5)
-qd_guess[25:30] = np.linspace(qd_guess[25], qd_guess[30], 5)
-qd_guess[30:35] = np.linspace(qd_guess[30], qd_guess[35], 5)
-qd_guess[35:39] = np.linspace(qd_guess[35], qd_guess[39], 4)
-qd_guess[40] = qd_guess[39]
+# qd_guess[0:5] =   np.linspace(qd_guess[0],  qd_guess[5], 5)
+# qd_guess[5:10] =  np.linspace(qd_guess[5],  qd_guess[10], 5)
+# qd_guess[10:15] = np.linspace(qd_guess[10], qd_guess[15], 5)
+# qd_guess[15:20] = np.linspace(qd_guess[15], qd_guess[20], 5)
+# qd_guess[20:25] = np.linspace(qd_guess[20], qd_guess[25], 5)
+# qd_guess[25:30] = np.linspace(qd_guess[25], qd_guess[30], 5)
+# qd_guess[30:35] = np.linspace(qd_guess[30], qd_guess[35], 5)
+# qd_guess[35:39] = np.linspace(qd_guess[35], qd_guess[39], 4)
+# qd_guess[40] = qd_guess[39]
 
+q_guess = np.load(f'data/q_opt_{T}.npy')
+qd_guess = np.load(f'data/qd_opt_{T}.npy')
+qdd_guess = np.load(f'data/qdd_opt_{T}.npy')
 
 
 # a = np.linspace(0, np.pi*2, T+1)
@@ -170,12 +177,12 @@ qd_guess[40] = qd_guess[39]
 # qdd_guess = np.stack([-np.sin(a), -np.cos(a)]).T*np.pi/8
 prog.SetDecisionVariableValueInVector(q, q_guess, initial_guess)
 prog.SetDecisionVariableValueInVector(qd, qd_guess, initial_guess)
-prog.SetDecisionVariableValueInVector(qdd, qdd_guess[:-1], initial_guess)
+prog.SetDecisionVariableValueInVector(qdd, qdd_guess, initial_guess)
 
 #u_guess = np.zeros([T,nu])
 # u_guess = np.radians(10*np.sin(np.linspace([0]*2, [2*np.pi]*2, T)))
-u_guess = np.load('u_opt.npy')
-plt.show()
+u_guess = np.load(f'data/u_opt_{T}.npy')
+# plt.show()
 prog.SetDecisionVariableValueInVector(u, u_guess, initial_guess)
 
 ###############################################################################
