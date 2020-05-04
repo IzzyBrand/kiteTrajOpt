@@ -4,7 +4,7 @@
 #~*
 #data/*
 #*.ipynb
-#.DS_Store
+.DS_Store
 #keys.py
 #__pycache__/*
 #*#
@@ -14,19 +14,6 @@
 #*/__pycache__/*
 #*keyfile*
 
-*
-Dockerfile
-!src/
-!src/tests
-!src/order_book
-!*.cc
-!*.h
-!src/Makefile
-
-!scripts/
-!*.py
-
-!.gitignore
-
-!external/*
-jupyter_setup.py
+.ipynb_checkpoints
+__pycache__
+*.tar.gz
