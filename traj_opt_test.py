@@ -179,7 +179,6 @@ plt.plot(np.degrees(u_opt))
 x,y,r = qd_opt.T
 #print('Thetadot, Phidot:', x[0], y[0])
 
-#print(np.cumsum(h_opt), u_opt)
 u_interp = np.interp(np.linspace(0, np.sum(h_opt[:-1]), 5*(T-1)), np.concatenate((np.array([0]), np.cumsum(h_opt)[:-1])), u_opt[:, 0])
 np.save('fig8_openloop_control.npy', u_interp)
 np.save('fig8_openloop_times.npy', np.arange(len(u_interp)) * np.sum(h_opt) / len(u_interp))
