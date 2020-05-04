@@ -72,8 +72,8 @@ for t in range(T+1):
 
     prog.AddLinearConstraint(q[t,0] <= np.radians(75)) # stay off the ground
     # prog.AddLinearConstraint(q[t,2] == 50) # keep the kite at 50m
-    prog.AddLinearConstraint(q[t,2] >= 40)
-    prog.AddLinearConstraint(q[t,2] <= 60)
+    prog.AddLinearConstraint(q[t,2] >= 10) # minimum tether length
+    # prog.AddLinearConstraint(q[t,2] <= 60) # maximum tether length
 
     #prog.AddLinearConstraint(q[t,0] >= np.radians(2)) # stay out of vertical singularity
 
@@ -99,9 +99,9 @@ for t in range(T):
         prog.AddQuadraticCost((u[t+1, 0] - u[t, 0])*(u[t+1, 0] - u[t, 0]))
         prog.AddQuadraticCost((u[t+1, 1] - u[t, 1])*(u[t+1, 1] - u[t, 1]))
 
-for t in range(T):
-    prog.AddQuadraticCost(qd[t,2]*u[t,1]) # maximize power
-# prog.AddCost(qd[:-1,2].dot(u[:,1]))
+# for t in range(T):
+#     prog.AddQuadraticCost(qd[t,2]*u[t,1]) # maximize power
+prog.AddCost(qd[:-1,2].dot(u[:,1]))
 ###############################################################################
 # Initial guess
 ###############################################################################

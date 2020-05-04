@@ -10,9 +10,12 @@ nu = 2
 w = np.array([6, 0, 0])
 
 class MPC:
-    def __init__(self, T):
+    def __init__(self, T, ref_traj, dt):
         self.T = T # number of planning steps
+        self.ref_traj = ref_traj
+        self.ref_T = self.ref_traj[0].shape[0] - 1
         self.kite = Kite()
+        self.dt = dt
 
     def dynamics(self, args):
         x = args[:nq*2]
@@ -31,21 +34,17 @@ class MPC:
         # control inputs
         u = self.prog.NewContinuousVariables(rows=self.T, cols=nu, name='u')
         # vector of the time intervals
-        h = self.prog.NewContinuousVariables(self.T, name='h')
+        # h = self.prog.NewContinuousVariables(self.T, name='h')
 
-        return q, qd, qdd, u, h
+        return q, qd, qdd, u
 
-    def add_constraints(self, variables):
-        q, qd, qdd, u, h = variables
-
-        # lower and upper bound on the time steps for all t
-        self.prog.AddBoundingBoxConstraint([1./self.T] * self.T,
-            [10./self.T] * self.T, h)
+    def add_constraints(self, variables, q_0, qd_0):
+        q, qd, qdd, u = variables
 
         # dynamics constraints
         for t in range(self.T):
-            self.prog.AddConstraint(eq(q[t+1], q[t] + h[t] * qd[t]))
-            self.prog.AddConstraint(eq(qd[t+1], qd[t] + h[t] * qdd[t]))
+            self.prog.AddConstraint(eq(q[t+1], q[t] + dt * qd[t]))
+            self.prog.AddConstraint(eq(qd[t+1], qd[t] + dt * qdd[t]))
 
             args = np.concatenate((q[t], qd[t], qdd[t], u[t]))
             self.prog.AddConstraint(self.dynamics,
@@ -65,8 +64,13 @@ class MPC:
             self.prog.AddLinearConstraint(u[t,0] <= np.degrees(20))
             self.prog.AddLinearConstraint(u[t,0] >= -np.degrees(20))
 
-    def add_costs(self, variables):
-        q, qd, qdd, u, h = variables
+        # trajectory starts at the current position
+        self.prog.AddLinearConstraint(q[0] == q_0)
+        self.prog.AddLinearConstraint(qd[0] == qd_0)
+
+    def add_costs(self, variables, start_t=0):
+        q, qd, qdd, u = variables
+        q_ref, qd_ref, qdd_ref, u_ref = self.ref_traj
 
         # control smoothness cost
         for t in range(self.T-1):
@@ -76,29 +80,29 @@ class MPC:
         # energy generation cost
         # self.prog.AddCost(qd[:-1,2].dot(u[:,1]))
 
-        # TODO: add trajectory tracking cost
+        for t in range(1, self.T):
+            ref_t = (t + start_t) % self.ref_T
+            self.prog.AddQuadraticCost((q[t] - q_ref[ref_t]).T.dot(q[t] - q_ref[ref_t]))
+            self.prog.AddQuadraticCost((qd[t] - qd_ref[ref_t]).T.dot(qd[t] - qd_ref[ref_t]))
+            # NOTE: should we be penalizing acceleration
+            # self.prog.AddQuadraticCost((qdd[t] - qdd_ref[t]).T.dot(qdd[t] - qdd_ref[t]))
 
-    def set_initial_guess(self, variables):
-        q, qd, qdd, u, h = variables
+    def set_initial_guess(self, variables, start_t):
+        q, qd, qdd, u = variables
 
         initial_guess = np.empty(self.prog.num_vars())
 
-        q_guess = np.load(f'data/q_opt_{self.T}.npy')
-        qd_guess = np.load(f'data/qd_opt_{self.T}.npy')
-        qdd_guess = np.load(f'data/qdd_opt_{self.T}.npy')
-        u_guess = np.load(f'data/u_opt_{self.T}.npy')
-        h_guess = np.load(f'data/h_opt_{self.T}.npy')
+        ts = (start_t + np.arange(self.T+1, dtype=int)) % self.ref_T
 
-        self.prog.SetDecisionVariableValueInVector(q, q_guess, initial_guess)
-        self.prog.SetDecisionVariableValueInVector(qd, qd_guess, initial_guess)
-        self.prog.SetDecisionVariableValueInVector(qdd, qdd_guess, initial_guess)
-        self.prog.SetDecisionVariableValueInVector(u, u_guess, initial_guess)
-        self.prog.SetDecisionVariableValueInVector(h, h_guess, initial_guess)
+        self.prog.SetDecisionVariableValueInVector(q, q_ref[ts], initial_guess)
+        self.prog.SetDecisionVariableValueInVector(qd, qd_ref[ts], initial_guess)
+        self.prog.SetDecisionVariableValueInVector(qdd, qdd_ref[ts[:-1]], initial_guess)
+        self.prog.SetDecisionVariableValueInVector(u, u_ref[ts[:-1]], initial_guess)
 
         return initial_guess
 
     def optimize(self, variables, initial_guess):
-        q, qd, qdd, u, h = variables
+        q, qd, qdd, u = variables
         # solve mathematical program with initial guess
         solver = SnoptSolver()
         result = solver.Solve(self.prog, initial_guess)
@@ -113,26 +117,27 @@ class MPC:
         qd_opt = result.GetSolution(qd)
         qdd_opt = result.GetSolution(qdd)
         u_opt = result.GetSolution(u)
-        h_opt = result.GetSolution(h)
 
-        return q_opt, qd_opt, qdd_opt, u_opt, h_opt
+        return q_opt, qd_opt, qdd_opt, u_opt
 
-    def plan(self):
+    def plan(self, start_t, state):
+        q_0, qd_0 = state
+
         variables = self.setup_optimization_variables()
-        self.add_constraints(variables)
-        self.add_costs(variables)
+        self.add_constraints(variables, q_0, qd_0)
+        self.add_costs(variables, start_t)
         initial_guess = self.set_initial_guess(variables)
         result = self.optimize(variables, initial_guess)
         return result
 
 
 if __name__ == '__main__':
-    # q_ref = np.load(f'data/q_opt_{T}.npy')
-    # qd_ref = np.load(f'data/qd_opt_{T}.npy')
-    # qdd_ref = np.load(f'data/qdd_opt_{T}.npy')
-    # u_ref = np.load(f'data/u_opt_{T}.npy')
-    # h_ref = np.load(f'data/h_opt_{T}.npy')
+    q_ref = np.load(f'data/q_opt_{T}.npy')
+    qd_ref = np.load(f'data/qd_opt_{T}.npy')
+    qdd_ref = np.load(f'data/qdd_opt_{T}.npy')
+    u_ref = np.load(f'data/u_opt_{T}.npy')
+    ref_traj = (q_ref, qd_ref, qdd_ref, u_ref)
 
-    mpc = MPC(40)
+    mpc = MPC(40, ref_traj)
     q_opt, qd_opt, qdd_opt, u_opt, h_opt = mpc.plan()
 
