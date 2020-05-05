@@ -16,6 +16,7 @@ class MPC:
         self.ref_T = self.ref_traj[0].shape[0] - 1
         self.kite = Kite()
         self.dt = dt
+        self.gamma = 0.8 # cost decay along trajectory
 
     def dynamics(self, args):
         x = args[:nq*2]
@@ -80,8 +81,8 @@ class MPC:
 
         for t in range(1, self.T):
             ref_t = (t + start_t) % self.ref_T
-            self.prog.AddQuadraticCost((q[t] - q_ref[ref_t]).T.dot(q[t] - q_ref[ref_t]))
-            self.prog.AddQuadraticCost((qd[t] - qd_ref[ref_t]).T.dot(qd[t] - qd_ref[ref_t]))
+            self.prog.AddQuadraticCost(self.gamma**(self.T - t - 1)*(q[t] - q_ref[ref_t]).T.dot(q[t] - q_ref[ref_t]))
+            self.prog.AddQuadraticCost(self.gamma**(self.T - t - 1)*(qd[t] - qd_ref[ref_t]).T.dot(qd[t] - qd_ref[ref_t]))
             # NOTE: should we be penalizing acceleration
             # self.prog.AddQuadraticCost((qdd[t] - qdd_ref[t]).T.dot(qdd[t] - qdd_ref[t]))
 
