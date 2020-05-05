@@ -33,7 +33,7 @@ class OlControl(LeafSystem):
 
     def Output(self, context, output):
         x = context.get_discrete_state_vector().CopyToVector()
-        y = output.SetFromVector([self.u[int(x)]])
+        output.SetFromVector([self.u[int(x)]])
 
 if __name__ == '__main__':
     builder = DiagramBuilder()

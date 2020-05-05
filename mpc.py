@@ -33,8 +33,6 @@ class MPC:
         qdd = self.prog.NewContinuousVariables(rows=self.T, cols=nq, name='qdd')
         # control inputs
         u = self.prog.NewContinuousVariables(rows=self.T, cols=nu, name='u')
-        # vector of the time intervals
-        # h = self.prog.NewContinuousVariables(self.T, name='h')
 
         return q, qd, qdd, u
 
@@ -43,17 +41,17 @@ class MPC:
 
         # dynamics constraints
         for t in range(self.T):
-            self.prog.AddConstraint(eq(q[t+1], q[t] + dt * qd[t]))
-            self.prog.AddConstraint(eq(qd[t+1], qd[t] + dt * qdd[t]))
+            self.prog.AddConstraint(eq(q[t+1], q[t] + self.dt * qd[t]))
+            self.prog.AddConstraint(eq(qd[t+1], qd[t] + self.dt * qdd[t]))
 
             args = np.concatenate((q[t], qd[t], qdd[t], u[t]))
             self.prog.AddConstraint(self.dynamics,
                 lb=[0]*nq*2, ub=[0]*nq*2, vars=args)
 
         # bound tether and add ground constraint
-        for t in range(self.T+1):
-            self.prog.AddLinearConstraint(q[t,0] <= np.radians(80))
-            self.prog.AddLinearConstraint(q[t,2] == 50)
+        # for t in range(self.T+1):
+        #     self.prog.AddLinearConstraint(q[t,0] <= np.radians(80))
+        #     self.prog.AddLinearConstraint(q[t,2] == 50)
             # self.prog.AddLinearConstraint(q[t,2] >= 40)
             # self.prog.AddLinearConstraint(q[t,2] <= 60)
 
@@ -65,17 +63,17 @@ class MPC:
             self.prog.AddLinearConstraint(u[t,0] >= -np.degrees(20))
 
         # trajectory starts at the current position
-        self.prog.AddLinearConstraint(q[0] == q_0)
-        self.prog.AddLinearConstraint(qd[0] == qd_0)
+        self.prog.AddLinearConstraint(eq(q[0], q_0))
+        self.prog.AddLinearConstraint(eq(qd[0], qd_0))
 
     def add_costs(self, variables, start_t=0):
         q, qd, qdd, u = variables
         q_ref, qd_ref, qdd_ref, u_ref = self.ref_traj
 
         # control smoothness cost
-        for t in range(self.T-1):
-            self.prog.AddQuadraticCost((u[t+1, 0] - u[t, 0])*(u[t+1, 0] - u[t, 0]))
-            self.prog.AddQuadraticCost((u[t+1, 1] - u[t, 1])*(u[t+1, 1] - u[t, 1]))
+        # for t in range(self.T-1):
+        #     self.prog.AddQuadraticCost((u[t+1, 0] - u[t, 0])*(u[t+1, 0] - u[t, 0]))
+        #     self.prog.AddQuadraticCost((u[t+1, 1] - u[t, 1])*(u[t+1, 1] - u[t, 1]))
 
         # energy generation cost
         # self.prog.AddCost(qd[:-1,2].dot(u[:,1]))
@@ -89,6 +87,7 @@ class MPC:
 
     def set_initial_guess(self, variables, start_t):
         q, qd, qdd, u = variables
+        q_ref, qd_ref, qdd_ref, u_ref = self.ref_traj
 
         initial_guess = np.empty(self.prog.num_vars())
 
@@ -120,14 +119,25 @@ class MPC:
 
         return q_opt, qd_opt, qdd_opt, u_opt
 
+
+    def visualize_plan(self, result):
+        q_opt,_,_,_ = result
+        q_ref,_,_,_ = self.ref_traj
+        plt.plot(*q_ref[:,[1,0]].T)
+        plt.plot(*q_opt[:,[1,0]].T)
+
+        plt.show()
+
     def plan(self, start_t, state):
-        q_0, qd_0 = state
+        q_0 = state[:3]
+        qd_0 = state[3:]
 
         variables = self.setup_optimization_variables()
         self.add_constraints(variables, q_0, qd_0)
         self.add_costs(variables, start_t)
-        initial_guess = self.set_initial_guess(variables)
+        initial_guess = self.set_initial_guess(variables, start_t)
         result = self.optimize(variables, initial_guess)
+        self.visualize_plan(result)
         return result
 
 

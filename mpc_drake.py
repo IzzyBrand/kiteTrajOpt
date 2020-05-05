@@ -17,7 +17,7 @@ class MPCDrake(LeafSystem):
         LeafSystem.__init__(self)
 
         self.mpc = mpc
-        self.U = None
+        self.U = np.zeros([1,2])
 
         period = mpc.dt
 
@@ -26,13 +26,12 @@ class MPCDrake(LeafSystem):
         self.DeclareDiscreteState(1)
         self.DeclarePeriodicDiscreteUpdate(period)
         self.DeclareVectorInputPort('x_kite', BasicVector(6))
-        self.DeclareVectorOutputPort('u_d', BasicVector(1), self.Output)
+        self.DeclareVectorOutputPort('u_d', BasicVector(2), self.Output, prerequisites_of_calc=set([self.all_state_ticket()]))
 
     def DoCalcDiscreteVariableUpdates(self, context, events, discrete_state):
-        current_index = context.get_discrete_state_vector().GetAtIndex(0) # current index
+        current_index = int(context.get_discrete_state_vector().GetAtIndex(0)) # current index
 
         x = self.EvalVectorInput(context, 0).CopyToVector()
-
         (_, _, _,self.U) = self.mpc.plan(current_index, x)
         
         next_index = int(current_index + 1) % self.n_period # next index
@@ -40,7 +39,7 @@ class MPCDrake(LeafSystem):
 
     def Output(self, context, output):
         x = context.get_discrete_state_vector().CopyToVector()
-        y = output.SetFromVector(self.U[0])
+        output.SetFromVector(self.U[0])
 
 if __name__ == '__main__':
     builder = DiagramBuilder()

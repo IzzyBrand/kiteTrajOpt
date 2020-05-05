@@ -24,12 +24,10 @@ def retime(h, X, dt):
         return np.array([np.interp(ts, np.cumsum(h), x)\
             for x in np.atleast_2d(X.T)]).T
     elif h.shape[0]+1 == X.shape[0]:
-        return np.vstack([retime(h,X[:-1],T), X[-1]])
+        return retime(h, X[:-1], dt)
     else:
         print('retime: h and X are different lengths')
         return None
-
-
 
 # create simple block diagram containing our system
 builder = DiagramBuilder()
@@ -51,7 +49,6 @@ q_guess = retime(h_guess, q_guess, dt)
 qd_guess = retime(h_guess, qd_guess, dt)
 qdd_guess = retime(h_guess, qdd_guess, dt)
 u_guess = retime(h_guess, u_guess, dt)
-
 mpc_lookahead = 5
 
 kite_mpc = MPC(mpc_lookahead, (q_guess, qd_guess, qdd_guess, u_guess), dt) # drake mathematical program for mpc
@@ -72,16 +69,13 @@ logger_control.set_name("control_logger")
 diagram = builder.Build()
 diagram.set_name("diagram")
 
-plt.figure()
-plot_system_graphviz(diagram, max_depth=2)
-plt.show()
+# plt.figure()
+# plot_system_graphviz(diagram, max_depth=2)
+# plt.show()
 
 
-theta = 1.04719
-phi = 0.0
-thetadot = 0.33634
-phidot = 0.46218
-x0 = [theta, phi, thetadot, phidot]
+
+x0 = np.concatenate([q_guess[0], qd_guess[0]])
 
 context = diagram.CreateDefaultContext()
 kite_context = diagram.GetMutableSubsystemContext(kite_system, context)

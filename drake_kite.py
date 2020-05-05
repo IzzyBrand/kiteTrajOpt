@@ -13,8 +13,8 @@ class DrakeKite(LeafSystem):
         self.kite = Kite() if kite is None else kite
         self.w = np.array([6, 0, 0])
         
-        self.DeclareContinuousState(4)
-        self.DeclareVectorInputPort("u", BasicVector(1))
+        self.DeclareContinuousState(6)
+        self.DeclareVectorInputPort("u", BasicVector(2))
         self.DeclareVectorOutputPort("y", BasicVector(6), self.CopyStateOut)
 
     def DoCalcTimeDerivatives(self, context, derivatives):
@@ -25,7 +25,7 @@ class DrakeKite(LeafSystem):
         
     def CopyStateOut(self, context, output):
         x = context.get_continuous_state_vector().CopyToVector()
-        y = output.SetFromVector(x)
+        output.SetFromVector(x)
 
 if __name__ == '__main__':
 	DrakeKite()
