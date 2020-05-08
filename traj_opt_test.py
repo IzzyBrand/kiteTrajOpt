@@ -65,7 +65,7 @@ for t in range(T):
 for t in range(T+1):
     prog.AddLinearConstraint(q[t,0] <= np.radians(75)) # stay off the ground
     prog.AddLinearConstraint(q[t,0] >= np.radians(2)) # stay out of vertical singularity
-    prog.AddLinearConstraint(q[t,1] <= 0) # stay to one side of the symmetry line
+    # prog.AddLinearConstraint(q[t,1] <= 0) # stay to one side of the symmetry line
     # prog.AddLinearConstraint(q[t,2] == 40) # keep the kite at a fixed length
     prog.AddLinearConstraint(q[t,2] >= 10) # minimum tether length
     prog.AddLinearConstraint(q[t,2] <= 60) # maximum tether length
