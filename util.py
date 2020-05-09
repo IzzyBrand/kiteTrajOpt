@@ -42,6 +42,29 @@ def get_circle_guess_trajectory(T):
 
     return q_guess, qd_guess, qdd_guess, u_guess
 
+def get_lemniscate_guess_trajectory(T, num_loops=1):
+    t = np.linspace(0,np.pi*2*num_loops,T+1)
+    s = np.radians(40)
+    n = 0.01
+    q_guess = np.random.randn(T+1,3)*n
+    qd_guess = np.random.randn(T+1,3)*n
+    qdd_guess = np.random.randn(T+1,3)*n
+    u_guess = np.random.randn(T,2)*n
+    # phi
+    q_guess[:,1] += s*np.cos(t)/(1+np.sin(t)**2)
+    qd_guess[:,1] += -s*(9*np.sin(t) + np.sin(3*t))/(-3 + np.cos(2*t))**2
+    qdd_guess[:,1] += s*(2*np.cos(t) + 45*np.cos(3*t) + np.cos(5*t))/(2*(-3 + np.cos(2*t))**3)
+    # theta
+    q_guess[:,0] += s*np.cos(t)*np.sin(t)/(1+np.sin(t)**2) + s
+    qd_guess[:,0] += s*(-2 + 6*np.cos(2*t))/(-3 + np.cos(2*t))**2
+    qdd_guess[:,0] += s*(28*np.sin(2*t) + 6*np.sin(4*t))/(-3 + np.cos(2*t))**3
+
+    q_guess[:,2] += 40
+
+    # plt.plot(*np.degrees(q_guess[:,[1,0]].T))
+    # plt.show()
+    return q_guess, qd_guess, qdd_guess[:-1], u_guess
+
 def load_trajectory(name):
     """ load all the components of a trajectory given a <name>
     trajectories are stored in the data folder
@@ -102,3 +125,8 @@ def retime(dt, q, qd, qdd, u, h):
         to_return.append(retimed)
 
     return to_return
+
+
+if __name__ == '__main__':
+    from matplotlib import pyplot as plt
+    get_lemniscate_guess_trajectory(100, 2)
