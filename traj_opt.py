@@ -3,7 +3,7 @@ from drake_kite import DrakeKite
 from pydrake.all import eq, MathematicalProgram, Solve, Variable, SnoptSolver
 from pydrake.solvers.mathematicalprogram import SolverType
 from simple_kite_dynamics import Kite
-from traj_opt_util import *
+from util import *
 import numpy as np
 from matplotlib import pyplot as plt
 import sys
@@ -103,58 +103,11 @@ prog.AddCost(0.01 * qd[:-1,2].dot(u[:,1]))
 ###############################################################################
 # Initial guess
 ###############################################################################
-# vector of the initial guess
-
-def retime(h, X, T):
-    ts = np.linspace(0,h.sum(),T)
-    if h.shape[0] == X.shape[0]:
-        return np.array([np.interp(ts, np.cumsum(h), x)\
-            for x in np.atleast_2d(X.T)]).T
-    elif h.shape[0]+1 == X.shape[0]:
-        return np.vstack([retime(h,X[:-1],T), X[-1]])
-    else:
-        print('retime: h and X are different lengths')
-        return None
-
-
 initial_guess = np.empty(prog.num_vars())
 
-
-t = np.linspace(0,np.pi*2,T+1)
-s = 20
-n = 0.1
-q_guess = np.random.randn(T+1,3)*n
-qd_guess = np.random.randn(T+1,3)*n
-qdd_guess = np.random.randn(T,3)*n
-u_guess = np.random.randn(T,2)*n
-q_guess[:,0] += s*np.sin(t) + 45
-q_guess[:,1] += s*np.cos(t) - s
-q_guess[:,2] += 40
-qd_guess[:,0] += s*np.cos(t)
-qd_guess[:,1] += -s*np.sin(t)
-qd_guess[:,2] += 0
-qdd_guess[:,0] += -s*np.sin(t)[:-1]
-qdd_guess[:,1] += -s*np.cos(t)[:-1]
-qdd_guess[:,2] += 0
-
-q_guess[:,:2] = np.radians(q_guess[:,:2])
-qd_guess[:,:2] = np.radians(qd_guess[:,:2])
-qdd_guess[:,:2] = np.radians(qdd_guess[:,:2])
-
-
-# q_guess = np.load(f'data/q_opt_{40}.npy')
-# qd_guess = np.load(f'data/qd_opt_{40}.npy')
-# qdd_guess = np.load(f'data/qdd_opt_{40}.npy')
-# u_guess = np.load(f'data/u_opt_{40}.npy')
-# h_guess = np.load(f'data/h_opt_{40}.npy')
-
-# q_guess = retime(h_guess, q_guess, T)
-# qd_guess = retime(h_guess, qd_guess, T)
-# qdd_guess = retime(h_guess, qdd_guess, T)
-# u_guess = retime(h_guess, u_guess, T)
-# h_guess = retime(h_guess, h_guess, T)
-
+q_guess, qd_guess, qdd_guess, u_guess = get_circle_guess_trajectory(T)
 h_guess = [h_min]
+
 prog.SetDecisionVariableValueInVector(q, q_guess, initial_guess)
 prog.SetDecisionVariableValueInVector(qd, qd_guess, initial_guess)
 prog.SetDecisionVariableValueInVector(qdd, qdd_guess, initial_guess)
@@ -195,25 +148,28 @@ euclidean_guess = np.array([kite.p(x_t) for x_t in x_guess])
 x_opt = np.hstack([q_opt, qd_opt])
 euclidean_opt = np.array([kite.p(x_t) for x_t in x_opt])
 
-
+# plot the trajectory in 3d
 fig = plt.figure() 
 ax = plt.axes(projection='3d') 
 ax.plot3D(*euclidean_guess.T, label='Guess') 
 ax.plot3D(*euclidean_opt.T, label='Opt') 
 ax.legend()
 
+# plot the roll control
 plt.figure()
 plt.plot(u_guess[:,0], label='Guess')
 plt.plot(u_opt[:,0], label='Opt')
 plt.title('Roll Control')
 plt.legend()
 
+# plot the pitch control
 plt.figure()
 plt.plot(u_guess[:,1], label='Guess')
 plt.plot(u_opt[:,1], label='Opt')
 plt.title('Tether Control')
 plt.legend()
 
+# plot the power output
 plt.figure()
 plt.plot(qd_opt[:-1,2]*u_opt[:,1])
 plt.title('Power')
