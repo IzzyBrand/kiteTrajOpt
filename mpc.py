@@ -85,12 +85,22 @@ class MPC:
         # energy generation cost
         # self.prog.AddCost(qd[:-1,2].dot(u[:,1]))
 
-        for t in range(1, self.T):
-            ref_t = (t + start_t) % self.ref_T
-            self.prog.AddQuadraticCost(self.gamma**(self.T - t - 1)*(q[t] - q_ref[ref_t]).T.dot(q[t] - q_ref[ref_t]))
-            self.prog.AddQuadraticCost(self.gamma**(self.T - t - 1)*(qd[t] - qd_ref[ref_t]).T.dot(qd[t] - qd_ref[ref_t]))
+        # for t in range(1, self.T):
+        #     ref_t = (t + start_t) % self.ref_T
+        #     self.prog.AddQuadraticCost(self.gamma**(self.T - t - 1)*(q[t] - q_ref[ref_t]).T.dot(q[t] - q_ref[ref_t]))
+        #     self.prog.AddQuadraticCost(self.gamma**(self.T - t - 1)*(qd[t] - qd_ref[ref_t]).T.dot(qd[t] - qd_ref[ref_t]))
             # NOTE: should we be penalizing acceleration
             # self.prog.AddQuadraticCost((qdd[t] - qdd_ref[t]).T.dot(qdd[t] - qdd_ref[t]))
+
+
+        t = np.arange(1,self.T)
+        ref_t = (t + start_t) % self.ref_T
+        q_error = q[t] - q_ref[ref_t]
+        qd_error = qd[t] - qd_ref[ref_t]
+        self.prog.AddQuadraticCost(q_error[:,0].dot(q_error[:,0]))
+        self.prog.AddQuadraticCost(q_error[:,1].dot(q_error[:,1]))
+        self.prog.AddQuadraticCost(qd_error[:,0].dot(qd_error[:,0]))
+        self.prog.AddQuadraticCost(qd_error[:,1].dot(qd_error[:,1]))
 
     def set_initial_guess(self, variables, start_t):
         q, qd, qdd, u = variables
@@ -144,7 +154,7 @@ class MPC:
         self.add_costs(variables, start_t)
         initial_guess = self.set_initial_guess(variables, start_t)
         result = self.optimize(variables, initial_guess)
-        self.visualize_plan(result)
+        # self.visualize_plan(result)
         return result
 
 

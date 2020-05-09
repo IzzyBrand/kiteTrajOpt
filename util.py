@@ -126,7 +126,6 @@ def retime(dt, q, qd, qdd, u, h):
 
     return to_return
 
-
 if __name__ == '__main__':
     from matplotlib import pyplot as plt
     q,_,_,_ = get_lemniscate_guess_trajectory(100, 1.5)

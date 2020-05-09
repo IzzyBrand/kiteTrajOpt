@@ -63,21 +63,21 @@ controller_context = diagram.GetMutableSubsystemContext(controller, context)
 controller_context.SetDiscreteState([0])
 
 simulator = Simulator(diagram, context)
-simulator.AdvanceTo(10)
+simulator.AdvanceTo(16.2)
 
-# (_, T) = logger_kite.data().shape
-# W = np.ones([T,3]) * np.array([6, 0, 0])[None,:]
-# U = logger_control.data().transpose()
-# X = logger_kite.data().transpose()
-# expected_control_times = np.load('fig8_openloop_times.npy')
+(_, T) = logger_kite.data().shape
+W = np.ones([T,3]) * np.array([6, 0, 0])[None,:]
+U = logger_control.data().transpose()
+X = logger_kite.data().transpose()
+# expected_control_times = np.load('data/fig8_openloop_times.npy')
 
 
-# plt.figure()
-# plt.plot(logger_kite.sample_times(), logger_kite.data().transpose())
-# plt.legend(['theta', 'phi', 'thetadot', 'phidot'])
-# plt.figure()
-# plt.plot(expected_control_times, olc.u)
-# plt.plot(logger_kite.sample_times(), U)
-# plt.show()
+plt.figure()
+plt.plot(logger_kite.sample_times(), logger_kite.data().transpose())
+plt.legend(['theta', 'phi', 'thetadot', 'phidot'])
+plt.figure()
+plt.plot(expected_control_times, olc.u)
+plt.plot(logger_kite.sample_times(), U)
+plt.show()
 
-# animate_trajectory(X, U, W)
+animate_trajectory(X, U, W)

@@ -36,6 +36,7 @@ class MPCDrake(LeafSystem):
         
         next_index = int(current_index + 1) % self.n_period # next index
         discrete_state.get_mutable_vector().SetAtIndex(0, next_index)
+        print(current_index)
 
     def Output(self, context, output):
         x = context.get_discrete_state_vector().CopyToVector()

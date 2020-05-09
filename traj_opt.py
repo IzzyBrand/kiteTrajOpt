@@ -14,7 +14,7 @@ import sys
 nq = 3
 nu = 2
 # time steps in the trajectory optimization
-T = 100
+T = 50
 # minimum and maximum time interval is seconds
 h_min = 5./T
 h_max = 60./T
@@ -90,9 +90,9 @@ for t in range(T):
 
     # prog.AddQuadraticCost(u[t, 0]*u[t, 0]) # penalize roll inputs
 
-tether_smoothness = 0.5 * (T-5)/T # Newtons
-roll_smoothness = 5. * (T-5)/T  # radians
-power_cost_scale = 0.05  # watts
+tether_smoothness = 0.1 * (T-5)/T # Newtons
+roll_smoothness = 1. * (T-5)/T  # radians
+power_cost_scale = 0.01  # watts
 
 # control smoothing constraint
 for t in range(T-1):
@@ -119,9 +119,9 @@ initial_guess = np.empty(prog.num_vars())
 # qd_guess = qd_guess[:T+1]
 # qdd_guess = qdd_guess[:T]
 # u_guess = u_guess[:T]
-q_guess, qd_guess, qdd_guess, u_guess = get_lemniscate_guess_trajectory(T, num_loops=1.5)
+# q_guess, qd_guess, qdd_guess, u_guess = get_lemniscate_guess_trajectory(T, num_loops=1.5)
 
-# q_guess, qd_guess, qdd_guess, u_guess = get_circle_guess_trajectory(T)
+q_guess, qd_guess, qdd_guess, u_guess = get_circle_guess_trajectory(T)
 h_guess = [h_max]
 
 prog.SetDecisionVariableValueInVector(q, q_guess, initial_guess)
@@ -162,9 +162,9 @@ qdd_opt = result.GetSolution(qdd)
 u_opt = result.GetSolution(u)
 
 # mirror the results for viewing
-# q_opt, qd_opt, qdd_opt, u_opt = create_mirrored_loop(q_opt, qd_opt, qdd_opt, u_opt)
-# q_guess, qd_guess, qdd_guess, u_guess = create_mirrored_loop(q_guess, qd_guess, qdd_guess, u_guess)
-# T *= 2
+q_opt, qd_opt, qdd_opt, u_opt = create_mirrored_loop(q_opt, qd_opt, qdd_opt, u_opt)
+q_guess, qd_guess, qdd_guess, u_guess = create_mirrored_loop(q_guess, qd_guess, qdd_guess, u_guess)
+T *= 2
 
 print(f'Duration: {T*h_opt}')
 print(f'Power: {qd_opt[:-1,2].dot(u_opt[:,1])/T}')

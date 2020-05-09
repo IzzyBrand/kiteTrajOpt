@@ -157,3 +157,36 @@ class Kite:
         xdot = np.array([thetadot, phidot, rdot, thetadotdot, phidotdot, rdotdot])
 
         return xdot
+
+
+    def linearize(self, x, u, w, eps=1e-2):
+        """ numerical linearization of the kite around x
+        df/dx
+        """
+
+        dxdx = np.zeros([6,6])
+        # dxdx[:3,3:] = np.eye(3)
+
+        for i in range(6):
+            diff = np.zeros(6)
+            diff[i] = eps
+            xd_diff = (self.f(x+diff, u, w)-self.f(x-diff,u,w))/(2*eps)
+
+            dxdx[:,i] = xd_diff
+
+        dxdu = np.zeros([6,2])
+        for i in range(2):
+            diff = np.zeros(2)
+            diff[i] = eps
+            xd_diff = (self.f(x, u+diff, w)-self.f(x,u-diff,w))/(2*eps)
+
+            dxdu[:,i] = xd_diff
+
+        return dxdx, dxdu
+
+
+if __name__ == '__main__':
+    kite = Kite()
+    print(kite.linearize(np.random.randn(6)*1e-3, np.random.randn(2)*1e-3, np.array([6,0,0])))
+
+
