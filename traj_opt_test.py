@@ -87,10 +87,14 @@ for t in range(T):
 
     # prog.AddQuadraticCost(u[t, 0]*u[t, 0]) # penalize roll inputs
 
-    # control smoothing constraint
-    if t < T - 1:
-        prog.AddQuadraticCost((u[t+1, 0] - u[t, 0])*(u[t+1, 0] - u[t, 0]))
-        prog.AddQuadraticCost((u[t+1, 1] - u[t, 1])*(u[t+1, 1] - u[t, 1]))
+# control smoothing constraint
+for t in range(T-1):
+    prog.AddQuadraticCost((u[t+1, 0] - u[t, 0])*(u[t+1, 0] - u[t, 0]))
+    prog.AddQuadraticCost((u[t+1, 1] - u[t, 1])*(u[t+1, 1] - u[t, 1]))
+
+# control smoothing constraint across the last timestep
+prog.AddQuadraticCost((u[0, 0] + u[-1, 0])*(u[0, 0] + u[-1, 0]))
+prog.AddQuadraticCost((u[0, 1] - u[-1, 1])*(u[0, 1] - u[-1, 1]))
 
 # for t in range(T):
 #     prog.AddQuadraticCost(qd[t,2]*u[t,1]) # maximize power
@@ -119,7 +123,7 @@ def create_mirrored_loop(q, qd, qdd, u):
 
     q_full = np.vstack([q[:-1], q_mirrored])
     qd_full = np.vstack([qd[:-1], qd_mirrored])
-    qdd_full = np.vstack([qdd[:-1], qdd_mirrored])
+    qdd_full = np.vstack([qdd, qdd_mirrored])
     u_full = np.vstack([u, u_mirrored])
     return q_full, qd_full, qdd_full, u_full
 
