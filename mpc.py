@@ -25,6 +25,15 @@ class MPC:
         # TODO: wind should be a function of time
         return xd - self.kite.f(x, u, w)
 
+    def linear_dynamics(self, args):
+        x = args[:nq*2]
+        xd = args[nq:nq*3]
+        u = args[-nu:]
+        # TODO: wind should be a function of time
+        A, B = self.kite.linearize(x, u, w) 
+
+        return xd - (A @ x + B @ u)
+
     def setup_optimization_variables(self):
         # initialize program
         self.prog = MathematicalProgram()
@@ -50,7 +59,9 @@ class MPC:
             # self.prog.AddConstraint(self.dynamics,
             #     lb=[0]*nq*2, ub=[0]*nq*2, vars=args)
             args = np.concatenate((q[t+1], qd[t+1], qdd[t], u[t])) # backward euler
-            self.prog.AddConstraint(self.    dynamics, lb=[0]*nq*2, ub=[0]*nq*2, vars=args)
+            #self.prog.AddConstraint(self.    dynamics, lb=[0]*nq*2, ub=[0]*nq*2, vars=args)
+            e = self.linear_dynamics(args)
+            self.prog.AddLinearConstraint(eq(e,[0]*6))
 
             self.prog.AddConstraint(eq(q[t+1], q[t] + self.dt * qd[t+1])) # backward euler
             self.prog.AddConstraint(eq(qd[t+1], qd[t] + self.dt * qdd[t])) # backward euler
