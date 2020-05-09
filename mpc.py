@@ -42,12 +42,18 @@ class MPC:
 
         # dynamics constraints
         for t in range(self.T):
-            self.prog.AddConstraint(eq(q[t+1], q[t] + self.dt * qd[t]))
-            self.prog.AddConstraint(eq(qd[t+1], qd[t] + self.dt * qdd[t]))
+            # forward euler
+            # self.prog.AddConstraint(eq(q[t+1], q[t] + self.dt * qd[t]))
+            # self.prog.AddConstraint(eq(qd[t+1], qd[t] + self.dt * qdd[t]))
 
-            args = np.concatenate((q[t], qd[t], qdd[t], u[t]))
-            self.prog.AddConstraint(self.dynamics,
-                lb=[0]*nq*2, ub=[0]*nq*2, vars=args)
+            # args = np.concatenate((q[t], qd[t], qdd[t], u[t]))
+            # self.prog.AddConstraint(self.dynamics,
+            #     lb=[0]*nq*2, ub=[0]*nq*2, vars=args)
+            args = np.concatenate((q[t+1], qd[t+1], qdd[t], u[t])) # backward euler
+            self.prog.AddConstraint(self.    dynamics, lb=[0]*nq*2, ub=[0]*nq*2, vars=args)
+
+            self.prog.AddConstraint(eq(q[t+1], q[t] + self.dt * qd[t+1])) # backward euler
+            self.prog.AddConstraint(eq(qd[t+1], qd[t] + self.dt * qdd[t])) # backward euler
 
         # bound tether and add ground constraint
         # for t in range(self.T+1):
