@@ -14,10 +14,10 @@ import sys
 nq = 3
 nu = 2
 # time steps in the trajectory optimization
-T = 50
+T = 75
 # minimum and maximum time interval is seconds
 h_min = 5./T
-h_max = 20./T
+h_max = 60./T
 w = np.array([6, 0, 0])
 
 ###############################################################################
@@ -83,30 +83,40 @@ prog.AddLinearConstraint(qd[0,2] == qd[-1,2])
 for t in range(T):
     prog.AddLinearConstraint(u[t,1] <= 0) # you can't push the kite
     prog.AddLinearConstraint(u[t,1] >= -10) # limit generator torque
-    prog.AddLinearConstraint(u[t,0] <= np.degrees(20))
-    prog.AddLinearConstraint(u[t,0] >= -np.degrees(20))
+    prog.AddLinearConstraint(u[t,0] <= np.radians(20))
+    prog.AddLinearConstraint(u[t,0] >= -np.radians(20))
 
     # prog.AddQuadraticCost(u[t, 0]*u[t, 0]) # penalize roll inputs
 
+tether_smoothness = 0.1 # Newtons
+roll_smoothness = 1.    # radians
+power_cost_scale = 0.1  # watts
+
 # control smoothing constraint
 for t in range(T-1):
-    prog.AddQuadraticCost((u[t+1, 0] - u[t, 0])*(u[t+1, 0] - u[t, 0]))
-    prog.AddQuadraticCost((u[t+1, 1] - u[t, 1])*(u[t+1, 1] - u[t, 1]))
+    prog.AddQuadraticCost(roll_smoothness*(u[t+1, 0] - u[t, 0])*(u[t+1, 0] - u[t, 0]))
+    prog.AddQuadraticCost(tether_smoothness*(u[t+1, 1] - u[t, 1])*(u[t+1, 1] - u[t, 1]))
+
+# testing out a different form of the control smoothness constraint
+# prog.AddQuadraticCost(Q = roll_smoothness*np.eye(T-1), B = np.zeros(T-1), vars = np.diff(u[:,0]))
+# prog.AddQuadraticCost(Q = tether_smoothness*np.eye(T-1), B = np.zeros(T-1), vars = np.diff(u[:,1]))
 
 # control smoothing constraint across the last timestep
-prog.AddQuadraticCost((u[0, 0] + u[-1, 0])*(u[0, 0] + u[-1, 0]))
-prog.AddQuadraticCost((u[0, 1] - u[-1, 1])*(u[0, 1] - u[-1, 1]))
+prog.AddQuadraticCost(roll_smoothness*(u[0, 0] + u[-1, 0])*(u[0, 0] + u[-1, 0]))
+prog.AddQuadraticCost(tether_smoothness*(u[0, 1] - u[-1, 1])*(u[0, 1] - u[-1, 1]))
 
+# power generation costs
+prog.AddQuadraticCost(power_cost_scale * qd[:-1,2].dot(u[:,1]))
 # for t in range(T):
-#     prog.AddQuadraticCost(qd[t,2]*u[t,1]) # maximize power
-prog.AddCost(0.01 * qd[:-1,2].dot(u[:,1]))
+#     prog.AddQuadraticCost(power_cost_scale*qd[t,2]*u[t,1]) # maximize power
+# prog.AddCost(power_cost_scale * qd[:-1,2].dot(u[:,1]))
 ###############################################################################
 # Initial guess
 ###############################################################################
 initial_guess = np.empty(prog.num_vars())
 
 q_guess, qd_guess, qdd_guess, u_guess = get_circle_guess_trajectory(T)
-h_guess = [h_min]
+h_guess = [h_max]
 
 prog.SetDecisionVariableValueInVector(q, q_guess, initial_guess)
 prog.SetDecisionVariableValueInVector(qd, qd_guess, initial_guess)
@@ -117,7 +127,18 @@ prog.SetDecisionVariableValueInVector(h, h_guess, initial_guess)
 ###############################################################################
 # Solve and get the solution
 ###############################################################################
+# print out a title so we can keep track of multiple experiments
+traj_opt_title = "long traj testing long init guess"
+description = f"""long traj long init guess
+roll_smoothness = {roll_smoothness}
+tether_smoothness = {tether_smoothness}
+power_cost_scale = {power_cost_scale}
+T = {T}"""
+print(traj_opt_title)
+print(description)
+
 # solve mathematical program with initial guess
+prog.SetSolverOption(SolverType.kSnopt, "Print file", "snopt.out")
 prog.SetSolverOption(SolverType.kSnopt, "Major iterations limit", 10000)
 solver = SnoptSolver()
 result = solver.Solve(prog, initial_guess)
@@ -140,7 +161,7 @@ q_guess, qd_guess, qdd_guess, u_guess = create_mirrored_loop(q_guess, qd_guess, 
 T *= 2
 
 print(f'Duration: {T*h_opt}')
-print(f'Power: {qd_opt[:-1,2].dot(u_opt[:,1])/(T*h_opt[0])}')
+print(f'Power: {qd_opt[:-1,2].dot(u_opt[:,1])/T}')
 
 # convert to euclidean coordinates
 x_guess = np.hstack([q_guess, qd_guess])
@@ -153,12 +174,15 @@ fig = plt.figure()
 ax = plt.axes(projection='3d') 
 ax.plot3D(*euclidean_guess.T, label='Guess') 
 ax.plot3D(*euclidean_opt.T, label='Opt') 
+ax.set_title(traj_opt_title) # the title that we printed at the start of the run
 ax.legend()
 
 # plot the roll control
 plt.figure()
-plt.plot(u_guess[:,0], label='Guess')
-plt.plot(u_opt[:,0], label='Opt')
+plt.plot(np.degrees(u_guess[:,0]), label='Guess')
+plt.plot(np.degrees(u_opt[:,0]), label='Opt')
+plt.xlabel('Timestep')
+plt.ylabel('Degrees')
 plt.title('Roll Control')
 plt.legend()
 
@@ -166,6 +190,8 @@ plt.legend()
 plt.figure()
 plt.plot(u_guess[:,1], label='Guess')
 plt.plot(u_opt[:,1], label='Opt')
+plt.xlabel('Timestep')
+plt.ylabel('Newtons')
 plt.title('Tether Control')
 plt.legend()
 

@@ -13,7 +13,7 @@
 #*.o
 #*/__pycache__/*
 #*keyfile*
-
+snopt.out
 .ipynb_checkpoints
 __pycache__
 *.tar.gz
