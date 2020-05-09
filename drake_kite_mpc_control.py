@@ -25,7 +25,7 @@ kite_system.set_name("kite")
 mpc_hz = 20
 dt = 1 / mpc_hz
 
-q_ref, qd_ref, qdd_ref, u_ref, _ = retime(dt, *load_trajectory('opt_100.npy'))
+q_ref, qd_ref, qdd_ref, u_ref, _ = retime(dt, *load_trajectory('opt_200.npy'))
 
 mpc_lookahead = 5
 

@@ -43,7 +43,7 @@ def get_circle_guess_trajectory(T):
     return q_guess, qd_guess, qdd_guess, u_guess
 
 def get_lemniscate_guess_trajectory(T, num_loops=1):
-    t = np.linspace(0,np.pi*2*num_loops,T+1)
+    t = np.linspace(0,np.pi*2*num_loops,T+1) + np.pi/2
     s = np.radians(40)
     n = 0.01
     q_guess = np.random.randn(T+1,3)*n
@@ -129,4 +129,6 @@ def retime(dt, q, qd, qdd, u, h):
 
 if __name__ == '__main__':
     from matplotlib import pyplot as plt
-    get_lemniscate_guess_trajectory(100, 2)
+    q,_,_,_ = get_lemniscate_guess_trajectory(100, 1.5)
+    plt.plot(*q[:,[1,0]].T)
+    plt.show()
