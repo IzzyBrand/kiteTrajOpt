@@ -14,8 +14,11 @@ def create_mirrored_loop(q, qd, qdd, u):
     u_full = np.vstack([u, u_mirrored])
     return q_full, qd_full, qdd_full, u_full
 
-
 def get_circle_guess_trajectory(T):
+    """ Generate an intital trajectory guess (a circle in theta and phi)
+    of T timesteps. This only half a trajectory (one circle instead of two)
+    because we are optimizing a symmetric trajectory
+    """
     t = np.linspace(0,np.pi*2,T+1)
     s = 20
     n = 0.1
@@ -39,8 +42,16 @@ def get_circle_guess_trajectory(T):
 
     return q_guess, qd_guess, qdd_guess, u_guess
 
-
 def load_trajectory(name):
+    """ load all the components of a trajectory given a <name>
+    trajectories are stored in the data folder
+
+            'data/q_<name>'
+            'data/qd_<name>'
+            'data/qdd_<name>'
+            'data/u_<name>'
+            'data/h_<name>'
+    """
     to_return = []
 
     for prefix in ['q', 'qd', 'qdd', 'u', 'h']:
@@ -50,6 +61,15 @@ def load_trajectory(name):
     return to_return
 
 def save_trajectory(name, q, qd, qdd, u, h):
+    """ save all the components of a trajectory given a <name>
+    trajectories are stored in the data folder
+
+            'data/q_<name>'
+            'data/qd_<name>'
+            'data/qdd_<name>'
+            'data/u_<name>'
+            'data/h_<name>'
+    """
     prefix_list = ['q', 'qd', 'qdd', 'u', 'h']
     traj_list = [q, qd, qdd, u, h]
 
@@ -59,6 +79,9 @@ def save_trajectory(name, q, qd, qdd, u, h):
 
 
 def retime(dt, q, qd, qdd, u, h):
+    """ take an existing trajectory and a desired timestep size, and 
+    retime that trajectory using linear interpolation to the new timestep
+    """
     old_T = u.shape[0] # number of timesteps in the original traj
 
     if h.size == 1:
