@@ -14,7 +14,7 @@ import sys
 nq = 3
 nu = 2
 # time steps in the trajectory optimization
-T = 75
+T = 100
 # minimum and maximum time interval is seconds
 h_min = 5./T
 h_max = 60./T
@@ -88,8 +88,8 @@ for t in range(T):
 
     # prog.AddQuadraticCost(u[t, 0]*u[t, 0]) # penalize roll inputs
 
-tether_smoothness = 0.1 # Newtons
-roll_smoothness = 1.    # radians
+tether_smoothness = 0.05 * (T-5)/T # Newtons
+roll_smoothness = 0.5 * (T-5)/T  # radians
 power_cost_scale = 0.1  # watts
 
 # control smoothing constraint
@@ -128,8 +128,8 @@ prog.SetDecisionVariableValueInVector(h, h_guess, initial_guess)
 # Solve and get the solution
 ###############################################################################
 # print out a title so we can keep track of multiple experiments
-traj_opt_title = "long traj testing long init guess"
-description = f"""long traj long init guess
+traj_opt_title = "the big one"
+description = f"""the big one
 roll_smoothness = {roll_smoothness}
 tether_smoothness = {tether_smoothness}
 power_cost_scale = {power_cost_scale}
@@ -139,7 +139,7 @@ print(description)
 
 # solve mathematical program with initial guess
 prog.SetSolverOption(SolverType.kSnopt, "Print file", "snopt.out")
-prog.SetSolverOption(SolverType.kSnopt, "Major iterations limit", 10000)
+prog.SetSolverOption(SolverType.kSnopt, "Major iterations limit", 100000)
 solver = SnoptSolver()
 result = solver.Solve(prog, initial_guess)
 
