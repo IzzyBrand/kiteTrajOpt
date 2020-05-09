@@ -13,21 +13,7 @@ from drake_kite import DrakeKite
 from mpc_drake import MPCDrake
 from mpc import MPC
 from vis import animate_trajectory
-
-# h: original timesteps
-# X: original states
-# T: desired number of timesteps
-def retime(h, X, dt):
-    T = int(h.sum() / dt)
-    ts = np.linspace(0, h.sum(), T)
-    if h.shape[0] == X.shape[0]:
-        return np.array([np.interp(ts, np.cumsum(h), x)\
-            for x in np.atleast_2d(X.T)]).T
-    elif h.shape[0]+1 == X.shape[0]:
-        return retime(h, X[:-1], dt)
-    else:
-        print('retime: h and X are different lengths')
-        return None
+from util import *
 
 # create simple block diagram containing our system
 builder = DiagramBuilder()
@@ -35,23 +21,15 @@ builder = DiagramBuilder()
 kite_system = builder.AddSystem(DrakeKite())
 kite_system.set_name("kite")
 
-# TODO: Load reference trajectory
-q_guess = np.load(f'data/q_opt_40.npy')
-qd_guess = np.load(f'data/qd_opt_40.npy')
-qdd_guess = np.load(f'data/qdd_opt_40.npy')
-u_guess = np.load(f'data/u_opt_40.npy')
-h_guess = np.load(f'data/h_opt_40.npy')
 
 mpc_hz = 20
 dt = 1 / mpc_hz
 
-q_guess = retime(h_guess, q_guess, dt)
-qd_guess = retime(h_guess, qd_guess, dt)
-qdd_guess = retime(h_guess, qdd_guess, dt)
-u_guess = retime(h_guess, u_guess, dt)
+q_ref, qd_ref, qdd_ref, u_ref, _ = retime(dt, *load_trajectory('opt_100.npy'))
+
 mpc_lookahead = 5
 
-kite_mpc = MPC(mpc_lookahead, (q_guess, qd_guess, qdd_guess, u_guess), dt) # drake mathematical program for mpc
+kite_mpc = MPC(mpc_lookahead, (q_ref, qd_ref, qdd_ref, u_ref), dt) # drake mathematical program for mpc
 mpc_controller = MPCDrake(kite_mpc) # Drake system wrapping of our mpc
 controller = builder.AddSystem(mpc_controller) # mpc after adding to system diagram
 controller.set_name("controller")
@@ -74,8 +52,7 @@ diagram.set_name("diagram")
 # plt.show()
 
 
-
-x0 = np.concatenate([q_guess[0], qd_guess[0]])
+x0 = np.concatenate([q_ref[0], qd_ref[0]])
 
 context = diagram.CreateDefaultContext()
 kite_context = diagram.GetMutableSubsystemContext(kite_system, context)
@@ -88,19 +65,19 @@ controller_context.SetDiscreteState([0])
 simulator = Simulator(diagram, context)
 simulator.AdvanceTo(10)
 
-(_, T) = logger_kite.data().shape
-W = np.ones([T,3]) * np.array([6, 0, 0])[None,:]
-U = logger_control.data().transpose()
-X = logger_kite.data().transpose()
-expected_control_times = np.load('fig8_openloop_times.npy')
+# (_, T) = logger_kite.data().shape
+# W = np.ones([T,3]) * np.array([6, 0, 0])[None,:]
+# U = logger_control.data().transpose()
+# X = logger_kite.data().transpose()
+# expected_control_times = np.load('fig8_openloop_times.npy')
 
 
-plt.figure()
-plt.plot(logger_kite.sample_times(), logger_kite.data().transpose())
-plt.legend(['theta', 'phi', 'thetadot', 'phidot'])
-plt.figure()
-plt.plot(expected_control_times, olc.u)
-plt.plot(logger_kite.sample_times(), U)
-plt.show()
+# plt.figure()
+# plt.plot(logger_kite.sample_times(), logger_kite.data().transpose())
+# plt.legend(['theta', 'phi', 'thetadot', 'phidot'])
+# plt.figure()
+# plt.plot(expected_control_times, olc.u)
+# plt.plot(logger_kite.sample_times(), U)
+# plt.show()
 
-animate_trajectory(X, U, W)
+# animate_trajectory(X, U, W)
