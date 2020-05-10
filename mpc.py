@@ -12,7 +12,7 @@ w = np.array([6, 0, 0])
 class MPC:
     def __init__(self, T, ref_traj, dt):
         self.T = T # number of planning steps
-        self.ref_traj = ref_traj
+        self.ref_traj = ref_traj # ref_traj = (q_ref, qd_ref, qdd_ref, u_ref)
         self.ref_T = self.ref_traj[0].shape[0] - 1
         self.kite = Kite()
         self.dt = dt
@@ -24,6 +24,19 @@ class MPC:
         u = args[-nu:]
         # TODO: wind should be a function of time
         return xd - self.kite.f(x, u, w)
+
+    def linear_dynamics(self, lp_vars, x_nom, u_nom):
+        x = lp_vars[:nq*2]
+        #xd = lp_vars[nq:nq*3]
+        u = lp_vars[-nu:]
+        # TODO: wind should be a function of time
+        A, B = self.kite.linearize(x_nom, u_nom, w) 
+
+        xdd_lin = A @ x + B @ u
+
+        qdd_lin = xdd_lin[3:]
+
+        return qdd_lin
 
     def setup_optimization_variables(self):
         # initialize program
@@ -37,23 +50,30 @@ class MPC:
 
         return q, qd, qdd, u
 
-    def add_constraints(self, variables, q_0, qd_0):
+    def add_constraints(self, variables, q_0, qd_0, start_t):
         q, qd, qdd, u = variables
 
         # dynamics constraints
+        q_ref, qd_ref, qdd_ref, u_ref = self.ref_traj
         for t in range(self.T):
-            # forward euler
-            # self.prog.AddConstraint(eq(q[t+1], q[t] + self.dt * qd[t]))
-            # self.prog.AddConstraint(eq(qd[t+1], qd[t] + self.dt * qdd[t]))
 
-            # args = np.concatenate((q[t], qd[t], qdd[t], u[t]))
+            # forward euler
+            self.prog.AddConstraint(eq(q[t+1], q[t] + self.dt * qd[t]))
+            self.prog.AddConstraint(eq(qd[t+1], qd[t] + self.dt * qdd[t]))
+
+            args = np.concatenate((q[t], qd[t], qdd[t], u[t]))
             # self.prog.AddConstraint(self.dynamics,
             #     lb=[0]*nq*2, ub=[0]*nq*2, vars=args)
-            args = np.concatenate((q[t+1], qd[t+1], qdd[t], u[t])) # backward euler
-            self.prog.AddConstraint(self.    dynamics, lb=[0]*nq*2, ub=[0]*nq*2, vars=args)
+            #args = np.concatenate((q[t+1], qd[t+1], qdd[t], u[t])) # backward euler
+            #self.prog.AddConstraint(self.    dynamics, lb=[0]*nq*2, ub=[0]*nq*2, vars=args)
 
-            self.prog.AddConstraint(eq(q[t+1], q[t] + self.dt * qd[t+1])) # backward euler
-            self.prog.AddConstraint(eq(qd[t+1], qd[t] + self.dt * qdd[t])) # backward euler
+            ref_t = (t + start_t) % self.ref_T
+            x_ref = np.concatenate((q_ref[ref_t], qd_ref[ref_t]))
+            qdd_lin = self.linear_dynamics(args, x_ref, u_ref[ref_t])
+            self.prog.AddLinearConstraint(eq(qdd_lin, qdd[t]))
+
+            #self.prog.AddConstraint(eq(q[t+1], q[t] + self.dt * qd[t+1])) # backward euler
+            #self.prog.AddConstraint(eq(qd[t+1], qd[t] + self.dt * qdd[t])) # backward euler
 
         # bound tether and add ground constraint
         # for t in range(self.T+1):
@@ -65,9 +85,9 @@ class MPC:
         # control input constrinats
         for t in range(self.T):
             self.prog.AddLinearConstraint(u[t,1] <= 0) # you can't push the kite
-            self.prog.AddLinearConstraint(u[t,1] >= -10) # limit generator torque
-            self.prog.AddLinearConstraint(u[t,0] <= np.degrees(20))
-            self.prog.AddLinearConstraint(u[t,0] >= -np.degrees(20))
+            #self.prog.AddLinearConstraint(u[t,1] >= -10) # limit generator torque
+            #self.prog.AddLinearConstraint(u[t,0] <= np.degrees(20))
+            #self.prog.AddLinearConstraint(u[t,0] >= -np.degrees(20))
 
         # trajectory starts at the current position
         self.prog.AddLinearConstraint(eq(q[0], q_0))
@@ -97,10 +117,16 @@ class MPC:
         ref_t = (t + start_t) % self.ref_T
         q_error = q[t] - q_ref[ref_t]
         qd_error = qd[t] - qd_ref[ref_t]
-        self.prog.AddQuadraticCost(q_error[:,0].dot(q_error[:,0]))
-        self.prog.AddQuadraticCost(q_error[:,1].dot(q_error[:,1]))
-        self.prog.AddQuadraticCost(qd_error[:,0].dot(qd_error[:,0]))
-        self.prog.AddQuadraticCost(qd_error[:,1].dot(qd_error[:,1]))
+
+        self.prog.AddQuadraticCost(q_error[:-1,0].dot(q_error[:-1,0]))
+        self.prog.AddQuadraticCost(q_error[:-1,1].dot(q_error[:-1,1]))
+        self.prog.AddQuadraticCost(qd_error[:-1,0].dot(qd_error[:-1,0]))
+        self.prog.AddQuadraticCost(qd_error[:-1,1].dot(qd_error[:-1,1]))
+
+        self.prog.AddQuadraticCost(10*q_error[-1,0]*q_error[-1,0])
+        self.prog.AddQuadraticCost(10*q_error[-1,1]*q_error[-1,1])
+        self.prog.AddQuadraticCost(10*qd_error[-1,0]*qd_error[-1,0])
+        self.prog.AddQuadraticCost(10*qd_error[-1,1]*qd_error[-1,1])
 
     def set_initial_guess(self, variables, start_t):
         q, qd, qdd, u = variables
@@ -150,11 +176,11 @@ class MPC:
         qd_0 = state[3:]
 
         variables = self.setup_optimization_variables()
-        self.add_constraints(variables, q_0, qd_0)
+        self.add_constraints(variables, q_0, qd_0, start_t)
         self.add_costs(variables, start_t)
         initial_guess = self.set_initial_guess(variables, start_t)
         result = self.optimize(variables, initial_guess)
-        # self.visualize_plan(result)
+        #self.visualize_plan(result)
         return result
 
 
