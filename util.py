@@ -59,7 +59,7 @@ def get_lemniscate_guess_trajectory(T, num_loops=1):
     qd_guess[:,0] += s*(-2 + 6*np.cos(2*t))/(-3 + np.cos(2*t))**2
     qdd_guess[:,0] += s*(28*np.sin(2*t) + 6*np.sin(4*t))/(-3 + np.cos(2*t))**3
 
-    q_guess[:,2] += 40
+    q_guess[:,2] += np.linspace(20,60,T+1)
 
     # plt.plot(*np.degrees(q_guess[:,[1,0]].T))
     # plt.show()
@@ -102,7 +102,7 @@ def save_trajectory(name, q, qd, qdd, u, h):
 
 
 def retime(dt, q, qd, qdd, u, h):
-    """ take an existing trajectory and a desired timestep size, and 
+    """ take an existing trajectory and a desired timestep size, and
     retime that trajectory using linear interpolation to the new timestep
     """
     old_T = u.shape[0] # number of timesteps in the original traj
@@ -128,6 +128,6 @@ def retime(dt, q, qd, qdd, u, h):
 
 if __name__ == '__main__':
     from matplotlib import pyplot as plt
-    q,_,_,_ = get_lemniscate_guess_trajectory(100, 1.5)
-    plt.plot(*q[:,[1,0]].T)
-    plt.show()
+    from vis import plot_3d_trajectory
+    q,qd,_,_ = get_lemniscate_guess_trajectory(100, 2.5)
+    plot_3d_trajectory(q,qd)

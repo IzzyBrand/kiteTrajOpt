@@ -14,7 +14,7 @@ import sys
 nq = 3
 nu = 2
 # time steps in the trajectory optimization
-T = 50
+T = 400
 # minimum and maximum time interval is seconds
 h_min = 5./T
 h_max = 60./T
@@ -88,11 +88,10 @@ for t in range(T):
     prog.AddLinearConstraint(u[t,0] <= np.radians(20))
     prog.AddLinearConstraint(u[t,0] >= -np.radians(20))
 
-    # prog.AddQuadraticCost(u[t, 0]*u[t, 0]) # penalize roll inputs
 
 tether_smoothness = 0.1 * (T-5)/T # Newtons
 roll_smoothness = 1. * (T-5)/T  # radians
-power_cost_scale = 0.01  # watts
+power_cost_scale = 0.1  # watts
 
 # control smoothing constraint
 for t in range(T-1):
@@ -119,9 +118,9 @@ initial_guess = np.empty(prog.num_vars())
 # qd_guess = qd_guess[:T+1]
 # qdd_guess = qdd_guess[:T]
 # u_guess = u_guess[:T]
-# q_guess, qd_guess, qdd_guess, u_guess = get_lemniscate_guess_trajectory(T, num_loops=1.5)
+q_guess, qd_guess, qdd_guess, u_guess = get_lemniscate_guess_trajectory(T, num_loops=2.5)
 
-q_guess, qd_guess, qdd_guess, u_guess = get_circle_guess_trajectory(T)
+# q_guess, qd_guess, qdd_guess, u_guess = get_circle_guess_trajectory(T)
 h_guess = [h_max]
 
 prog.SetDecisionVariableValueInVector(q, q_guess, initial_guess)
@@ -134,7 +133,7 @@ prog.SetDecisionVariableValueInVector(h, h_guess, initial_guess)
 # Solve and get the solution
 ###############################################################################
 # print out a title so we can keep track of multiple experiments
-traj_opt_title = "lemniscate"
+traj_opt_title = "symmetric long 2.5 loops"
 description = f"""the big one
 roll_smoothness = {roll_smoothness}
 tether_smoothness = {tether_smoothness}
