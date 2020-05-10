@@ -1,4 +1,6 @@
 import numpy as np
+from simple_kite_dynamics import Kite
+from vis import plot_3d_trajectory
 
 def create_mirrored_loop(q, qd, qdd, u):
     """ Create a mirrored (phi and roll) copy of the trajecotory and append
@@ -126,8 +128,44 @@ def retime(dt, q, qd, qdd, u, h):
 
     return to_return
 
+def calc_power(qd, u):
+    """ get the power of a trajectory
+    """
+    T = u.shape[0]
+    return qd[:T,2].dot(u[:,1])/u.shape[0]
+
+def calc_dynamics_error(q, qd, qdd, u, h, w=np.array([6,0,0])):
+    """ sum the total dynamics error of a trajectory (with backwards)
+    euler integration
+    """
+    kite = Kite()
+    T = u.shape[0]
+    error = 0
+    for t in range(T):
+        dt = h[t] if h.size == T else h[0]
+        x = np.concatenate([q[t+1], qd[t+1]])
+        xprev = np.concatenate([q[t], qd[t]])
+        xd = np.concatenate([qd[t+1], qdd[t]])
+        error += np.linalg.norm(kite.f(x,u[t],w) - xd)
+        error += np.linalg.norm(x - (xprev + xd*dt))
+
+    return error
+
+def summarize(name=None, traj=None, plot=True):
+    """ Load a trajectory, print summary statistics
+    You can pass in a trajectory by name or just as a tuple
+    """
+    if name is not None:
+        q, qd, qdd, u, h = load_trajectory(name)
+    if traj is not None:
+        q, qd, qdd, u, h = traj
+
+    duration = h[0]*u.shape[0] if h.size==1 else h.sum()
+    print(f'Duration\t{duration}')
+    print(f'Power\t{calc_power(qd,u)}')
+    print(f'Error\t{calc_dynamics_error(q,qd,qdd,u,h)}')
+    if plot: plot_3d_trajectory(q,qd)
+
 if __name__ == '__main__':
-    from matplotlib import pyplot as plt
-    from vis import plot_3d_trajectory
     q,qd,_,_ = get_lemniscate_guess_trajectory(100, 2.5)
     plot_3d_trajectory(q,qd)
