@@ -25,9 +25,9 @@ kite_system.set_name("kite")
 mpc_hz = 20
 dt = 1 / mpc_hz
 
-q_ref, qd_ref, qdd_ref, u_ref, _ = retime(dt, *load_trajectory('opt_200.npy'))
+q_ref, qd_ref, qdd_ref, u_ref, h_ref = retime(dt, *load_trajectory('opt_200.npy'))
 
-mpc_lookahead = 5
+mpc_lookahead = 15
 
 kite_mpc = MPC(mpc_lookahead, (q_ref, qd_ref, qdd_ref, u_ref), dt) # drake mathematical program for mpc
 mpc_controller = MPCDrake(kite_mpc) # Drake system wrapping of our mpc
@@ -73,11 +73,18 @@ X = logger_kite.data().transpose()
 
 
 plt.figure()
-plt.plot(logger_kite.sample_times(), logger_kite.data().transpose())
-plt.legend(['theta', 'phi', 'thetadot', 'phidot'])
+plt.plot(logger_kite.sample_times(), logger_kite.data().transpose()[:,:3])
+plt.legend(['theta', 'phi', 'r'])
+
 plt.figure()
-plt.plot(expected_control_times, olc.u)
+plt.plot(logger_kite.sample_times(), logger_kite.data().transpose()[:,3:])
+plt.legend(['thetadot', 'phidot', 'rdot'])
+
+ref_times = np.cumsum(h_ref)
+plt.figure()
+plt.plot(ref_times, u_ref)
 plt.plot(logger_kite.sample_times(), U)
+plt.legend(['roll_ref', 'torque_ref', 'roll_real', 'torque_real'])
 plt.show()
 
 animate_trajectory(X, U, W)
