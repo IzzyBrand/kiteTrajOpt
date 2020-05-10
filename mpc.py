@@ -85,9 +85,9 @@ class MPC:
         # control input constrinats
         for t in range(self.T):
             self.prog.AddLinearConstraint(u[t,1] <= 0) # you can't push the kite
-            #self.prog.AddLinearConstraint(u[t,1] >= -10) # limit generator torque
-            #self.prog.AddLinearConstraint(u[t,0] <= np.degrees(20))
-            #self.prog.AddLinearConstraint(u[t,0] >= -np.degrees(20))
+            self.prog.AddLinearConstraint(u[t,1] >= -10) # limit generator torque
+            self.prog.AddLinearConstraint(u[t,0] <= np.radians(20))
+            self.prog.AddLinearConstraint(u[t,0] >= -np.radians(20))
 
         # trajectory starts at the current position
         self.prog.AddLinearConstraint(eq(q[0], q_0))

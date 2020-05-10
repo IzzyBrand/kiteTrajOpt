@@ -76,15 +76,17 @@ def animate_trajectory(X, U, W, save_file=None):
 
         line_ani.save(save_file, writer=writer)
 
-def plot_3d_trajectory(q, qd):
+def plot_3d_trajectory(q, qd, ax=None, show=True):
     kite = Kite()
     p = np.array([kite.p(x) for x in np.hstack([q, qd])])
 
-    # plot the trajectory in 3d
-    fig = plt.figure() 
-    ax = plt.axes(projection='3d') 
+    if ax is None:
+        fig = plt.figure()
+        ax = plt.axes(projection='3d')
+
     ax.plot3D(*p.T)
-    plt.show()
+
+    if show: plt.show()
 
 def main():
     T = 100 # how many frames

@@ -14,10 +14,10 @@ import sys
 nq = 3
 nu = 2
 # time steps in the trajectory optimization
-T = 400
+T = 800
 # minimum and maximum time interval is seconds
 h_min = 5./T
-h_max = 60./T
+h_max = 100./T
 w = np.array([6, 0, 0])
 
 ###############################################################################
@@ -71,15 +71,15 @@ for t in range(T+1):
 
 
 # the trajectory must be a closed circuit (symmetric)
-prog.AddLinearConstraint(q[0,1] == 0)
-prog.AddLinearConstraint(eq(q[0], q[-1]))
-prog.AddLinearConstraint(qd[0,0] == qd[-1,0])
-prog.AddLinearConstraint(qd[0,1] == -qd[-1,1])
-prog.AddLinearConstraint(qd[0,2] == qd[-1,2])
+# prog.AddLinearConstraint(q[0,1] == 0)
+# prog.AddLinearConstraint(eq(q[0], q[-1]))
+# prog.AddLinearConstraint(qd[0,0] == qd[-1,0])
+# prog.AddLinearConstraint(qd[0,1] == -qd[-1,1])
+# prog.AddLinearConstraint(qd[0,2] == qd[-1,2])
 
 # the trajectory must be a closed circuit (not symmetric)
-# prog.AddLinearConstraint(eq(q[0], q[-1]))
-# prog.AddLinearConstraint(eq(qd[0], qd[-1]))
+prog.AddLinearConstraint(eq(q[0], q[-1]))
+prog.AddLinearConstraint(eq(qd[0], qd[-1]))
 
 # penalize large control inputs and nonsmooth control inputs
 for t in range(T):
@@ -99,8 +99,8 @@ for t in range(T-1):
     prog.AddQuadraticCost(tether_smoothness*(u[t+1, 1] - u[t, 1])*(u[t+1, 1] - u[t, 1]))
 
 # control smoothing constraint across the last timestep (for symmetric trajectory)
-prog.AddQuadraticCost(roll_smoothness*(u[0, 0] + u[-1, 0])*(u[0, 0] + u[-1, 0]))
-prog.AddQuadraticCost(tether_smoothness*(u[0, 1] - u[-1, 1])*(u[0, 1] - u[-1, 1]))
+# prog.AddQuadraticCost(roll_smoothness*(u[0, 0] + u[-1, 0])*(u[0, 0] + u[-1, 0]))
+# prog.AddQuadraticCost(tether_smoothness*(u[0, 1] - u[-1, 1])*(u[0, 1] - u[-1, 1]))
 
 # power generation costs
 prog.AddQuadraticCost(power_cost_scale * qd[:-1,2].dot(u[:,1]))
@@ -118,7 +118,8 @@ initial_guess = np.empty(prog.num_vars())
 # qd_guess = qd_guess[:T+1]
 # qdd_guess = qdd_guess[:T]
 # u_guess = u_guess[:T]
-q_guess, qd_guess, qdd_guess, u_guess = get_lemniscate_guess_trajectory(T, num_loops=2.5)
+q_guess, qd_guess, qdd_guess, u_guess =\
+    get_lemniscate_guess_trajectory(T, num_loops=3.5)
 
 # q_guess, qd_guess, qdd_guess, u_guess = get_circle_guess_trajectory(T)
 h_guess = [h_max]
@@ -133,7 +134,7 @@ prog.SetDecisionVariableValueInVector(h, h_guess, initial_guess)
 # Solve and get the solution
 ###############################################################################
 # print out a title so we can keep track of multiple experiments
-traj_opt_title = "symmetric long 2.5 loops"
+traj_opt_title = "longer 3.5 loops"
 description = f"""the big one
 roll_smoothness = {roll_smoothness}
 tether_smoothness = {tether_smoothness}
@@ -161,9 +162,9 @@ qdd_opt = result.GetSolution(qdd)
 u_opt = result.GetSolution(u)
 
 # mirror the results for viewing
-q_opt, qd_opt, qdd_opt, u_opt = create_mirrored_loop(q_opt, qd_opt, qdd_opt, u_opt)
-q_guess, qd_guess, qdd_guess, u_guess = create_mirrored_loop(q_guess, qd_guess, qdd_guess, u_guess)
-T *= 2
+# q_opt, qd_opt, qdd_opt, u_opt = create_mirrored_loop(q_opt, qd_opt, qdd_opt, u_opt)
+# q_guess, qd_guess, qdd_guess, u_guess = create_mirrored_loop(q_guess, qd_guess, qdd_guess, u_guess)
+# T *= 2
 
 print(f'Duration: {T*h_opt}')
 print(f'Power: {qd_opt[:-1,2].dot(u_opt[:,1])/T}')
@@ -182,28 +183,28 @@ ax.plot3D(*euclidean_opt.T, label='Opt')
 ax.set_title(traj_opt_title) # the title that we printed at the start of the run
 ax.legend()
 
-# plot the roll control
-plt.figure()
-plt.plot(np.degrees(u_guess[:,0]), label='Guess')
-plt.plot(np.degrees(u_opt[:,0]), label='Opt')
-plt.xlabel('Timestep')
-plt.ylabel('Degrees')
-plt.title('Roll Control')
-plt.legend()
+# # plot the roll control
+# plt.figure()
+# plt.plot(np.degrees(u_guess[:,0]), label='Guess')
+# plt.plot(np.degrees(u_opt[:,0]), label='Opt')
+# plt.xlabel('Timestep')
+# plt.ylabel('Degrees')
+# plt.title('Roll Control')
+# plt.legend()
 
-# plot the pitch control
-plt.figure()
-plt.plot(u_guess[:,1], label='Guess')
-plt.plot(u_opt[:,1], label='Opt')
-plt.xlabel('Timestep')
-plt.ylabel('Newtons')
-plt.title('Tether Control')
-plt.legend()
+# # plot the pitch control
+# plt.figure()
+# plt.plot(u_guess[:,1], label='Guess')
+# plt.plot(u_opt[:,1], label='Opt')
+# plt.xlabel('Timestep')
+# plt.ylabel('Newtons')
+# plt.title('Tether Control')
+# plt.legend()
 
-# plot the power output
-plt.figure()
-plt.plot(qd_opt[:-1,2]*u_opt[:,1])
-plt.title('Power')
+# # plot the power output
+# plt.figure()
+# plt.plot(qd_opt[:-1,2]*u_opt[:,1])
+# plt.title('Power')
 
 plt.show()
 
