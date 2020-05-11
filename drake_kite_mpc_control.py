@@ -25,8 +25,8 @@ kite_system.set_name("kite")
 mpc_hz = 20
 dt = 1 / mpc_hz
 
-q_ref, qd_ref, qdd_ref, u_ref, h_ref = retime(dt, *load_trajectory('opt_200.npy'))
-
+q_ref, qd_ref, qdd_ref, u_ref, h_ref = retime(dt, *load_trajectory('opt_120.npy'))
+summarize(traj=(q_ref, qd_ref, qdd_ref, u_ref, h_ref), plot=False)
 mpc_lookahead = 15
 
 kite_mpc = MPC(mpc_lookahead, (q_ref, qd_ref, qdd_ref, u_ref), dt) # drake mathematical program for mpc
@@ -63,14 +63,17 @@ controller_context = diagram.GetMutableSubsystemContext(controller, context)
 controller_context.SetDiscreteState([0])
 
 simulator = Simulator(diagram, context)
-simulator.AdvanceTo(16.2)
+simulator.AdvanceTo(27)
 
 (_, T) = logger_kite.data().shape
 W = np.ones([T,3]) * np.array([6, 0, 0])[None,:]
 U = logger_control.data().transpose()
 X = logger_kite.data().transpose()
 # expected_control_times = np.load('data/fig8_openloop_times.npy')
-
+q_mpc = X[:,:3]
+qd_mpc = X[:,3:]
+ax = plot_3d_trajectory(q_mpc, qd_mpc, show=False)
+plot_3d_trajectory(q_ref, qd_ref, ax=ax)
 
 # plt.figure()
 # plt.plot(logger_kite.sample_times(), logger_kite.data().transpose()[:,:3])

@@ -133,14 +133,14 @@ def calc_power(qd, u):
     """ get the power of a trajectory
     """
     T = u.shape[0]
-    return qd[:T,2].dot(u[:,1])/u.shape[0]
+    return qd[:T,2].dot(u[:,1])/T
 
 def calc_dynamics_error(q, qd, qdd, u, h, w=np.array([6,0,0])):
     """ sum the total dynamics error of a trajectory (with backwards)
     euler integration
     """
     kite = Kite()
-    T = u.shape[0]
+    T = q.shape[0] - 1
     error = 0
     for t in range(T):
         dt = h[t] if h.size == T else h[0]

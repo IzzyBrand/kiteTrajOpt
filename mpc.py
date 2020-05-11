@@ -17,6 +17,8 @@ class MPC:
         self.kite = Kite()
         self.dt = dt
         self.gamma = 0.8 # cost decay along trajectory
+        self.pos_weight = 1.
+        self.vel_weight = 0.1
 
     def dynamics(self, args):
         x = args[:nq*2]
@@ -118,15 +120,15 @@ class MPC:
         q_error = q[t] - q_ref[ref_t]
         qd_error = qd[t] - qd_ref[ref_t]
 
-        self.prog.AddQuadraticCost(q_error[:-1,0].dot(q_error[:-1,0]))
-        self.prog.AddQuadraticCost(q_error[:-1,1].dot(q_error[:-1,1]))
-        self.prog.AddQuadraticCost(qd_error[:-1,0].dot(qd_error[:-1,0]))
-        self.prog.AddQuadraticCost(qd_error[:-1,1].dot(qd_error[:-1,1]))
+        self.prog.AddQuadraticCost(self.pos_weight*q_error[:-1,0].dot(q_error[:-1,0]))
+        self.prog.AddQuadraticCost(self.pos_weight*q_error[:-1,1].dot(q_error[:-1,1]))
+        self.prog.AddQuadraticCost(self.vel_weight*qd_error[:-1,0].dot(qd_error[:-1,0]))
+        self.prog.AddQuadraticCost(self.vel_weight*qd_error[:-1,1].dot(qd_error[:-1,1]))
 
-        self.prog.AddQuadraticCost(10*q_error[-1,0]*q_error[-1,0])
-        self.prog.AddQuadraticCost(10*q_error[-1,1]*q_error[-1,1])
-        self.prog.AddQuadraticCost(10*qd_error[-1,0]*qd_error[-1,0])
-        self.prog.AddQuadraticCost(10*qd_error[-1,1]*qd_error[-1,1])
+        self.prog.AddQuadraticCost(self.pos_weight*10*q_error[-1,0]*q_error[-1,0])
+        self.prog.AddQuadraticCost(self.pos_weight*10*q_error[-1,1]*q_error[-1,1])
+        self.prog.AddQuadraticCost(self.vel_weight*10*qd_error[-1,0]*qd_error[-1,0])
+        self.prog.AddQuadraticCost(self.vel_weight*10*qd_error[-1,1]*qd_error[-1,1])
 
     def set_initial_guess(self, variables, start_t):
         q, qd, qdd, u = variables
