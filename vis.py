@@ -76,7 +76,7 @@ def animate_trajectory(X, U, W, save_file=None):
 
         line_ani.save(save_file, writer=writer)
 
-def plot_3d_trajectory(q, qd, ax=None, show=True):
+def plot_3d_trajectory(q, qd, u=None, ax=None, show=True):
     kite = Kite()
     p = np.array([kite.p(x) for x in np.hstack([q, qd])])
 
@@ -84,9 +84,20 @@ def plot_3d_trajectory(q, qd, ax=None, show=True):
         fig = plt.figure()
         ax = plt.axes(projection='3d')
 
-    ax.plot3D(*p.T)
+    # we need to use a scatterplot to have color
+    if u is not None:
+        ts = np.arange(p.shape[0]) % u.shape[0]
+        power = qd[:,2] * u[ts,1]
+        power = power / np.abs(power).max()/2 + 0.5
+        color = plt.cm.jet(power)
+        ax.scatter(*p.T, color=color)
+    else:
+        plt.plot(*p.T)
 
-    if show: plt.show()
+    if show:
+        plt.show()
+    if not show:
+        return ax
 
 def main():
     T = 100 # how many frames

@@ -2,14 +2,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import mpl_toolkits.mplot3d.axes3d as p3
 import matplotlib.animation as animation
-from util import load_trajectory
+from util import load_trajectory, calc_power
 from simple_kite_dynamics import Kite
 
-# Fixing random state for reproducibility
-np.random.seed(19680801)
-
-
-def set_axes_equal(ax):
+def setup(ax):
     '''Make axes of 3D plot have equal scale so that spheres appear as spheres,
     cubes as cubes, etc..  This is one possible solution to Matplotlib's
     ax.set_aspect('equal') and ax.axis('equal') not working for 3D.
@@ -36,6 +32,19 @@ def set_axes_equal(ax):
     ax.set_xlim3d([x_middle - plot_radius, x_middle + plot_radius])
     ax.set_ylim3d([y_middle - plot_radius, y_middle + plot_radius])
     ax.set_zlim3d([0, 2*plot_radius])
+
+    ax.w_xaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
+    ax.w_yaxis.set_pane_color((1.0, 1.0, 1.0, 1.0))
+    ax.w_zaxis.set_pane_color((0.8, 0.8, 0.8, 1.0))
+    # ax.grid(False)
+
+
+    ax.set_xlabel('X (m)')
+    ax.set_ylabel('Y (m)')
+    ax.set_zlabel('Z (m)')
+
+
+    ax.set_title('Kite trajectory')
 
 def set_3d_data(line, data):
     line.set_data(data.T[0:2])
@@ -80,6 +89,8 @@ ax = fig.gca(projection='3d')
 
 # load in the trajectory and preprocess to get euclidean p
 q, qd, qdd, u, h = load_trajectory('opt_120.npy')
+print(calc_power(qd, u))
+
 kite = Kite()
 p = np.array([kite.p(x) for x in np.hstack([q, qd])])
 traj = (p, q, qd, qdd, u, h)
@@ -91,15 +102,10 @@ for data in get_data(traj, T-1):
     lines.extend(ax.plot(*data.T))
 
 
-# Setting the axes properties
-ax.set_xlabel('X')
-ax.set_ylabel('Y')
-ax.set_zlabel('Z')
-set_axes_equal(ax)
+setup(ax)
 
-ax.set_title('3D Test')
 # Creating the Animation object
-line_ani = animation.FuncAnimation(fig, update, T+1, fargs=(traj, lines),
+line_ani = animation.FuncAnimation(fig, update, T, fargs=(traj, lines),
                                    interval=50, blit=False)
 
 plt.show()

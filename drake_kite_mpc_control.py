@@ -12,7 +12,7 @@ from pydrake.systems.drawing import plot_system_graphviz
 from drake_kite import DrakeKite
 from mpc_drake import MPCDrake
 from mpc import MPC
-from vis import animate_trajectory
+from vis import *
 from util import *
 
 # create simple block diagram containing our system
@@ -72,19 +72,19 @@ X = logger_kite.data().transpose()
 # expected_control_times = np.load('data/fig8_openloop_times.npy')
 
 
-plt.figure()
-plt.plot(logger_kite.sample_times(), logger_kite.data().transpose()[:,:3])
-plt.legend(['theta', 'phi', 'r'])
+# plt.figure()
+# plt.plot(logger_kite.sample_times(), logger_kite.data().transpose()[:,:3])
+# plt.legend(['theta', 'phi', 'r'])
 
-plt.figure()
-plt.plot(logger_kite.sample_times(), logger_kite.data().transpose()[:,3:])
-plt.legend(['thetadot', 'phidot', 'rdot'])
+# plt.figure()
+# plt.plot(logger_kite.sample_times(), logger_kite.data().transpose()[:,3:])
+# plt.legend(['thetadot', 'phidot', 'rdot'])
 
-ref_times = np.cumsum(h_ref)
-plt.figure()
-plt.plot(ref_times, u_ref)
-plt.plot(logger_kite.sample_times(), U)
-plt.legend(['roll_ref', 'torque_ref', 'roll_real', 'torque_real'])
-plt.show()
+# ref_times = np.cumsum(h_ref)
+# plt.figure()
+# plt.plot(ref_times, u_ref)
+# plt.plot(logger_kite.sample_times(), U)
+# plt.legend(['roll_ref', 'torque_ref', 'roll_real', 'torque_real'])
+# plt.show()
 
-animate_trajectory(X, U, W)
+# animate_trajectory(X, U, W)
