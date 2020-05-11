@@ -47,7 +47,7 @@ class Kite:
         e_l = w_e/np.linalg.norm(w_e)
         return e_l
 
-    def e_t(self, x, u, w):
+    def e_t(self, x, u, w, get_wind_projection_ratio=False):
         roll, _ = u
 
         # calculate the kite airspeed vector
@@ -66,7 +66,12 @@ class Kite:
         e_o = np.cross(e_r, e_w)
 
         # get the angle of the kite (defined by airspeed)????
-        nu = np.arcsin(np.dot(w_e, e_r)/w_p_e_norm*np.tan(roll))
+        wind_projection_ratio = np.dot(w_e, e_r)/w_p_e_norm*np.tan(roll)
+
+        if get_wind_projection_ratio:
+            return wind_projection_ratio
+
+        nu = np.arcsin(wind_projection_ratio)
 
         # the basis in the plane of the kite pointing sideways (transverse)
         # accounting for kite roll
@@ -74,6 +79,7 @@ class Kite:
             e_o*(np.cos(roll)*np.cos(nu)) +\
             e_r*np.sin(roll)
 
+        
         return e_t
 
     def get_string_basis(self, x):

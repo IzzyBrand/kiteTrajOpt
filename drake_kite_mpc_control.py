@@ -25,7 +25,7 @@ kite_system.set_name("kite")
 mpc_hz = 20
 dt = 1 / mpc_hz
 
-q_ref, qd_ref, qdd_ref, u_ref, h_ref = retime(dt, *load_trajectory('opt_120.npy'))
+q_ref, qd_ref, qdd_ref, u_ref, h_ref = retime(dt, *load_trajectory('proj_ratio_opt_100.npy'))
 summarize(traj=(q_ref, qd_ref, qdd_ref, u_ref, h_ref), plot=False)
 mpc_lookahead = 15
 
@@ -63,7 +63,7 @@ controller_context = diagram.GetMutableSubsystemContext(controller, context)
 controller_context.SetDiscreteState([0])
 
 simulator = Simulator(diagram, context)
-simulator.AdvanceTo(27)
+simulator.AdvanceTo(15)
 
 (_, T) = logger_kite.data().shape
 W = np.ones([T,3]) * np.array([6, 0, 0])[None,:]

@@ -14,7 +14,7 @@ import sys
 nq = 3
 nu = 2
 # time steps in the trajectory optimization
-T = 150
+T = 50
 # minimum and maximum time interval is seconds
 h_min = 5./T
 h_max = 20./T
@@ -50,6 +50,16 @@ def dynamics(args):
     # TODO: wind should be a function of time
     return xd - kite.f(x, u, w)
 
+
+# return an internal dynamics model quantity which we want to constraint
+# so we can pass through arcsin without errors
+def wind_projection_ratio_bound(args):
+    x = args[:nq*2]
+    u = args[-nu:]
+    return [kite.e_t(x, u, w, get_wind_projection_ratio=True)]
+
+
+
 # link the configurations, velocities, and accelerations
 # uses implicit Euler method, https://en.wikipedia.org/wiki/Backward_Euler_method
 for t in range(T):
@@ -62,6 +72,9 @@ for t in range(T):
 
     prog.AddConstraint(eq(q[t+1], q[t] + h[0] * qd[t+1])) # backward euler
     prog.AddConstraint(eq(qd[t+1], qd[t] + h[0] * qdd[t])) # backward euler
+
+    # add a constaint on internal dynamics model quantity
+    prog.AddConstraint(wind_projection_ratio_bound, lb=[-.99], ub=[.99], vars=args)
 
 for t in range(T+1):
     prog.AddLinearConstraint(q[t,0] <= np.radians(75)) # stay off the ground
