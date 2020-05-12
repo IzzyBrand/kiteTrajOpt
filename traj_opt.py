@@ -14,13 +14,13 @@ import sys
 nq = 3
 nu = 2
 # time steps in the trajectory optimization
-T = 40
+T = 50
 # minimum and maximum time interval is seconds
 h_min = 5./T
 h_max = 10./T
 w = np.array([6, 0, 0])
 
-symmetric=False
+symmetric = True
 
 ###############################################################################
 # Set up the mathematical program
@@ -76,7 +76,7 @@ for t in range(T):
     prog.AddConstraint(eq(qd[t+1], qd[t] + h[0] * qdd[t])) # backward euler
 
     # add a constaint on internal dynamics model quantity
-    prog.AddConstraint(wind_projection_ratio_bound, lb=[-.99], ub=[.99], vars=args)
+    # prog.AddConstraint(wind_projection_ratio_bound, lb=[-.99], ub=[.99], vars=args)
 
 for t in range(T+1):
     prog.AddLinearConstraint(q[t,0] <= np.radians(75)) # stay off the ground
@@ -104,8 +104,8 @@ for t in range(T):
     prog.AddLinearConstraint(u[t,0] >= -np.radians(20))
 
 
-tether_smoothness = 2. * (T-5)/T # Newtons
-roll_smoothness = 0.2 * (T-5)/T  # radians
+tether_smoothness = 1. * (T-5)/T # Newtons
+roll_smoothness = 0.1 * (T-5)/T  # radians
 power_cost_scale = 0.001  # watts
 
 # control smoothing constraint
@@ -135,7 +135,7 @@ initial_guess = np.empty(prog.num_vars())
 # qdd_guess = qdd_guess[:T]
 # u_guess = u_guess[:T]
 q_guess, qd_guess, qdd_guess, u_guess =\
-    get_lemniscate_guess_trajectory(T, num_loops=1)
+    get_lemniscate_guess_trajectory(T, num_loops=0.5)
 
 # q_guess, qd_guess, qdd_guess, u_guess = get_circle_guess_trajectory(T)
 h_guess = [h_min]
@@ -183,8 +183,8 @@ if symmetric:
     q_guess, qd_guess, qdd_guess, u_guess = create_mirrored_loop(q_guess, qd_guess, qdd_guess, u_guess)
     T *= 2
 
-print(f'Duration: {T*h_opt}')
-print(f'Power: {qd_opt[:-1,2].dot(u_opt[:,1])/T}')
+# print trajectory statistics
+summarize(traj=(q_opt, qd_opt, qdd_opt, u_opt, h_opt), plot=False)
 
 # convert to euclidean coordinates
 x_guess = np.hstack([q_guess, qd_guess])

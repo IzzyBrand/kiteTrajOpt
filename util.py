@@ -57,12 +57,14 @@ def get_lemniscate_guess_trajectory(T, num_loops=1):
     qd_guess[:,1] += -s*(9*np.sin(t) + np.sin(3*t))/(-3 + np.cos(2*t))**2
     qdd_guess[:,1] += s*(2*np.cos(t) + 45*np.cos(3*t) + np.cos(5*t))/(2*(-3 + np.cos(2*t))**3)
     # theta
-    q_guess[:,0] += s/2*np.cos(t)*np.sin(t)/(1+np.sin(t)**2) + np.pi/2-s/2
+    q_guess[:,0] += s/2*np.cos(t)*np.sin(t)/(1+np.sin(t)**2) + np.pi/2-s/2 - np.radians(10)
     qd_guess[:,0] += s/2*(-2 + 6*np.cos(2*t))/(-3 + np.cos(2*t))**2
     qdd_guess[:,0] += s/2*(28*np.sin(2*t) + 6*np.sin(4*t))/(-3 + np.cos(2*t))**3
 
+
+    q_guess[:,2] += 30
     # q_guess[:,2] += np.linspace(20,40,T+1)
-    q_guess[:,2] += np.sin(np.linspace(0,np.pi, T+1))*20+40
+    # q_guess[:,2] += np.sin(np.linspace(0,np.pi, T+1))*20+40
 
     # plt.plot(*np.degrees(q_guess[:,[1,0]].T))
     # plt.show()
@@ -171,7 +173,8 @@ def summarize(name=None, traj=None, plot=True):
     if plot: plot_3d_trajectory(q,qd)
 
 if __name__ == '__main__':
-    q,qd,qdd,u,h = load_trajectory('asymmetric_opt_100.npy')
-    # q,qd,_,u = get_lemniscate_guess_trajectory(800, 3)
+    # q,qd,qdd,u,h = load_trajectory('asymmetric_opt_100.npy')
+    q,qd,qdd,u = get_lemniscate_guess_trajectory(800, 3)
+    h=np.array([0])
     summarize(traj=(q,qd,qdd,u,h), plot=False)
     plot_3d_trajectory(q,qd, title='T=100 orbit (6.9 W over 29 sec)')

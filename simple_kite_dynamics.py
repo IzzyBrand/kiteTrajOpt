@@ -97,8 +97,8 @@ class Kite:
 
         return np.array([e_theta, e_phi, e_r])
 
-    def F_theta_aer(self, x, u, w):
-        """ the total aerodynamic force on azimuth
+    def F_aer(self, x, u, w):
+        """ the total aerodynamic force on elevation
         """
         F_l = self.F_l(x, u, w)
         F_d = self.F_d(x, u, w)
@@ -111,23 +111,12 @@ class Kite:
 
         F_theta_aer = F_l * (np.cross(e_l, e_t).T @ e_theta) +\
             F_d * (e_l.T @ e_theta)
-        return F_theta_aer
+        F_phi_aer = F_l * (np.cross(e_l, e_t).T @ e_phi) +\
+            F_d*(e_l.T @ e_phi)
+        F_r_aer = F_l * (np.cross(e_l, e_t).T @ e_r) +\
+            F_d * (e_l.T @ e_r)
 
-    def F_phi_aer(self, x, u, w):
-        """ the total aerodynamic force on elevation
-        """
-        F_l = self.F_l(x, u, w)
-        F_d = self.F_d(x, u, w)
-
-        # get the basis of the kite string
-        e_theta, e_phi, e_r = self.get_string_basis(x)
-
-        e_l = self.e_l(x, u, w)
-        e_t = self.e_t(x, u, w)
-
-        F_phi_aer = F_l * (np.cross(e_l, e_t).T @ e_phi) + F_d*(e_l.T @ e_phi)
-
-        return F_phi_aer
+        return F_theta_aer, F_phi_aer, F_r_aer
 
     def F_l(self, x, u, w):
         """ force frome lift
@@ -147,18 +136,37 @@ class Kite:
         theta, phi, r, thetadot, phidot, rdot = x
         roll, torque = u
 
-        thetadotdot = self.F_theta_aer(x, u, w)/(r*self.m) +\
-            np.sin(theta)*self.g/r +\
-            np.sin(theta)*np.cos(theta)*phidot**2 -\
-            2*rdot*thetadot/r
+        s_t = np.sin(theta)
+        c_t = np.cos(theta)
 
-        phidotdot = self.F_phi_aer(x, u, w)/(r*self.m) -\
-            2/np.tan(theta)*phidot*thetadot -\
-            2*rdot*phidot/r
+        F_theta_aer, F_phi_aer, F_r_aer = self.F_aer(x, u, w)
 
-        rdotdot = torque/self.m +\
-            r * thetadot**2 +\
-            r * np.sin(theta)**2 * phidot**2
+        # Aero
+        # Gravity
+        # Centrifugal from phidot
+        # Rotational Inertia
+        thetadotdot = F_theta_aer/(r*self.m) \
+            + s_t*self.g/r \
+            + s_t*c_t*phidot**2 \
+            - 2*rdot*thetadot/r
+
+        # Aero
+        # idk
+        # Rotational Inertia
+        phidotdot = F_phi_aer/(r*self.m)  \
+            - 2*c_t/s_t*phidot*thetadot \
+            - 2*rdot*phidot/r
+
+        # Aero
+        # Gravity
+        # Torque
+        # Centrifugal from thetadot
+        # Centrifugal from phidot
+        rdotdot = F_r_aer/self.m \
+            - c_t*self.g \
+            + torque/self.m \
+            + r * thetadot**2 \
+            + r * (s_t*phidot)**2
 
         xdot = np.array([thetadot, phidot, rdot, thetadotdot, phidotdot, rdotdot])
 
