@@ -62,9 +62,9 @@ def get_lemniscate_guess_trajectory(T, num_loops=1):
     qdd_guess[:,0] += s/2*(28*np.sin(2*t) + 6*np.sin(4*t))/(-3 + np.cos(2*t))**3
 
 
-    q_guess[:,2] += 30
+    # q_guess[:,2] += 30
     # q_guess[:,2] += np.linspace(20,40,T+1)
-    # q_guess[:,2] += np.sin(np.linspace(0,np.pi, T+1))*20+40
+    q_guess[:,2] += np.cos(np.linspace(0,2*np.pi, T+1))*20+40
 
     # plt.plot(*np.degrees(q_guess[:,[1,0]].T))
     # plt.show()
@@ -173,16 +173,21 @@ def summarize(name=None, traj=None, plot=True, plot_power=False):
     if traj is not None:
         q, qd, qdd, u, h = traj
 
-    duration = h[0]*u.shape[0] if h.size==1 else h.sum()
+    T = u.shape[0]
+    duration = h[0]*T if h.size==1 else h.sum()
+    power = calc_power(qd,u)
     print(f'Duration\t{duration}')
-    print(f'Power\t{calc_power(qd,u)}')
+    print(f'Power\t{power}')
     print(f'Error\t{calc_dynamics_error(q,qd,qdd,u,h)}')
     if plot:
-        plot_3d_trajectory(q,qd,u=u if plot_power else None)
+        title = f'{T}-step {int(duration)} sec orbit. ({int(-power)} Watts)'
+        
+        plot_3d_trajectory(q,qd,u=u if plot_power else None, title=title)
 
 if __name__ == '__main__':
-    q,qd,qdd,u,h = load_trajectory('strong_opt_250.npy')
-    q,qd,qdd,u,h = retime(40/400,q,qd,qdd,u,h)
+    import sys
+    q,qd,qdd,u,h = load_trajectory(sys.argv[1])
+    # q,qd,qdd,u,h = retime(40/400,q,qd,qdd,u,h)
     # q,qd,qdd,u = get_lemniscate_guess_trajectory(800, 3)
     # h=np.array([0])
     summarize(traj=(q,qd,qdd,u,h), plot=True, plot_power=False)

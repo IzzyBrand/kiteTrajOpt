@@ -112,7 +112,7 @@ def plot_3d_trajectory(q, qd, u=None, ax=None, show=True, title=None):
     p = np.array([kite.p(x) for x in np.hstack([q, qd])])
 
     if ax is None:
-        fig = plt.figure()
+        fig = plt.figure(figsize=(8, 8))
         ax = plt.axes(projection='3d')
 
     # we need to use a scatterplot to have color
@@ -131,7 +131,7 @@ def plot_3d_trajectory(q, qd, u=None, ax=None, show=True, title=None):
     if show:
         setup_ax(ax)
         if title is not None:
-            ax.set_title(title)#, pad=40)
+            ax.set_title(title)
         plt.show()
     if not show:
         return ax

@@ -134,7 +134,7 @@ class MPC:
         # 1 : N - 1, position
         self.prog.AddQuadraticCost(self.pos_weight*q_error[:-1,0].dot(q_error[:-1,0]))
         self.prog.AddQuadraticCost(self.pos_weight*q_error[:-1,1].dot(q_error[:-1,1]))
-        #self.prog.AddQuadraticCost(r_discount * self.pos_weight*q_error[:-1,2].dot(q_error[:-1,2]))
+        self.prog.AddQuadraticCost(r_discount * self.pos_weight*q_error[:-1,2].dot(q_error[:-1,2]))
 
         # 1 : N - 1, Velocity
         self.prog.AddQuadraticCost(self.vel_weight*qd_error[:-1,0].dot(qd_error[:-1,0]))
@@ -144,12 +144,12 @@ class MPC:
         # N, position
         self.prog.AddQuadraticCost(self.pos_weight*self.terminal_weight*q_error[-1,0]*q_error[-1,0])
         self.prog.AddQuadraticCost(self.pos_weight*self.terminal_weight*q_error[-1,1]*q_error[-1,1])
-        #self.prog.AddQuadraticCost(r_discount * self.pos_weight*self.terminal_weight*q_error[-1,1]*q_error[-1,1])
+        self.prog.AddQuadraticCost(r_discount * self.pos_weight*self.terminal_weight*q_error[-1,1]*q_error[-1,1])
 
         # N, velocity
         self.prog.AddQuadraticCost(self.vel_weight*self.terminal_weight*qd_error[-1,0]*qd_error[-1,0])
         self.prog.AddQuadraticCost(self.vel_weight*self.terminal_weight*qd_error[-1,1]*qd_error[-1,1])
-        #self.prog.AddQuadraticCost(r_discount * self.vel_weight*self.terminal_weight*qd_error[-1,2]*qd_error[-1,2])
+        self.prog.AddQuadraticCost(r_discount * self.vel_weight*self.terminal_weight*qd_error[-1,2]*qd_error[-1,2])
 
     def set_initial_guess(self, variables, start_t):
         q, qd, qdd, u = variables
