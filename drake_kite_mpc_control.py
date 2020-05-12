@@ -22,17 +22,17 @@ kite_system = builder.AddSystem(DrakeKite())
 kite_system.set_name("kite")
 
 
-mpc_hz = 30
+mpc_hz = 5
 dt = 1 / mpc_hz
-
-q_ref, qd_ref, qdd_ref, u_ref, h_ref = retime(dt, *load_trajectory('opt_200.npy'))
+traj_name = 'sym_opt_200'
+q_ref, qd_ref, qdd_ref, u_ref, h_ref = retime(dt, *load_trajectory('%s.npy' % traj_name))
 summarize(traj=(q_ref, qd_ref, qdd_ref, u_ref, h_ref), plot=False)
-mpc_lookahead = 40
+mpc_lookahead = 10
 
 kite_mpc = MPC(mpc_lookahead, (q_ref, qd_ref, qdd_ref, u_ref), dt) # drake mathematical program for mpc
 mpc_controller = MPCDrake(kite_mpc) # Drake system wrapping of our mpc
 mpc_controller.U[0] = u_ref[0]
-mpc_controller.U[1] = u_ref[1]
+mpc_controller.U[1] = u_ref[0]
 
 controller = builder.AddSystem(mpc_controller) # mpc after adding to system diagram
 controller.set_name("controller")
@@ -50,9 +50,9 @@ logger_control.set_name("control_logger")
 diagram = builder.Build()
 diagram.set_name("Kite MPC Diagram")
 
-plt.figure()
-plot_system_graphviz(diagram, max_depth=2)
-plt.show()
+#plt.figure()
+#plot_system_graphviz(diagram, max_depth=2)
+#plt.show()
 
 
 x0 = np.concatenate([q_ref[0], qd_ref[0]])
@@ -78,7 +78,7 @@ qd_mpc = X[:,3:]
 ax = plot_3d_trajectory(q_mpc, qd_mpc, show=False)
 plot_3d_trajectory(q_ref, qd_ref, ax=ax)
 
-ref_times = np.cumsum(h_ref)
+ref_times = np.cumsum(h_ref) - h_ref[0]
 
 plt.figure()
 plt.plot(ref_times, q_ref[:,:2])
@@ -87,6 +87,7 @@ plt.legend(['theta_ref','phi_ref', 'theta', 'phi'])
 plt.xlabel('Time (s)')
 plt.ylabel('Angle (rad)')
 plt.title('Kite Angles')
+plt.savefig('kite_angles_%s_%dhz.png' % (traj_name, mpc_hz))
 
 plt.figure()
 plt.plot(ref_times, q_ref[:,2])
@@ -95,6 +96,7 @@ plt.legend(['r_ref', 'r'])
 plt.xlabel('Time (s)')
 plt.ylabel('Kite Distance (m)')
 plt.title('Kite Tether Length')
+plt.savefig('kite_tether_len_%s_%dhz.png' % (traj_name, mpc_hz))
 
 
 plt.figure()
@@ -104,14 +106,16 @@ plt.legend(['thetadot_ref', 'phidot_ref', 'thetadot', 'phidot'])
 plt.title('Angular Velocities')
 plt.xlabel('Time(s)')
 plt.ylabel('Angular Velocity (rad/s)')
+plt.savefig('angular_velocity_%s_%dhz.png' % (traj_name, mpc_hz))
 
 plt.figure()
 plt.plot(ref_times, qd_ref[:,2])
 plt.plot(logger_kite.sample_times(), logger_kite.data().transpose()[:,5])
 plt.legend(['rdot_ref', 'rdot'])
-plt.title('Generator Tension Force')
+plt.title('Generator Rate')
 plt.xlabel('Time(s)')
 plt.ylabel('Tether rate (m/s)')
+plt.savefig('tether_rate_%s_%dhz.png' % (traj_name, mpc_hz))
 
 
 plt.figure()
@@ -120,7 +124,8 @@ plt.plot(logger_kite.sample_times(), U[:,0])
 plt.legend(['roll_ref', 'roll_real'])
 plt.title('Kite Roll')
 plt.xlabel('Time(s)')
-plt.ylabel('Tether Angle (rad)')
+plt.ylabel('Kite Roll (rad)')
+plt.savefig('roll_%s_%dhz.png' % (traj_name, mpc_hz))
 
 plt.figure()
 plt.plot(ref_times, u_ref[:,1])
@@ -129,6 +134,7 @@ plt.legend(['torque_ref', 'torque_real'])
 plt.title('Tether Tension')
 plt.xlabel('Time(s)')
 plt.ylabel('Tether Tension (N)')
+plt.savefig('tension_%s_%dhz.png' % (traj_name, mpc_hz))
 
 plt.show()
 

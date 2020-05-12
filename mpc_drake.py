@@ -41,7 +41,7 @@ class MPCDrake(LeafSystem):
     def Output(self, context, output):
         x = context.get_discrete_state_vector().CopyToVector()
         #output.SetFromVector((self.U[0] + self.U[1])/2.)
-        output.SetFromVector((self.U[0])/2.)
+        output.SetFromVector((self.U[0]))
 
 if __name__ == '__main__':
     builder = DiagramBuilder()

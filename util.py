@@ -114,7 +114,10 @@ def retime(dt, q, qd, qdd, u, h):
 
     if h.size == 1:
         # if h is a single value, make a sequence of h's
-        h = np.ones(old_T) * h.item()
+        onevec = np.ones(old_T)
+        onevec[0] = 0
+        h = onevec * h.item()
+        #h = np.ones(old_T) * h.item()
 
     duration = h.sum() # duration of the initial trajectory
     new_T = int(duration / dt) # desired number of steps
