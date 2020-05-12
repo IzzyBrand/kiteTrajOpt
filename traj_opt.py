@@ -14,7 +14,7 @@ import sys
 nq = 3
 nu = 2
 # time steps in the trajectory optimization
-T = 50
+T = 40
 # minimum and maximum time interval is seconds
 h_min = 5./T
 h_max = 10./T
@@ -106,7 +106,7 @@ for t in range(T):
 
 tether_smoothness = 1. * (T-5)/T # Newtons
 roll_smoothness = 0.1 * (T-5)/T  # radians
-power_cost_scale = 0.001  # watts
+power_cost_scale = 0.1  # watts
 
 # control smoothing constraint
 for t in range(T-1):
@@ -120,9 +120,6 @@ if symmetric:
 
 # power generation costs
 prog.AddQuadraticCost(power_cost_scale * qd[:-1,2].dot(u[:,1]))
-# for t in range(T):
-#     prog.AddQuadraticCost(power_cost_scale*qd[t,2]*u[t,1]) # maximize power
-# prog.AddCost(power_cost_scale * qd[:-1,2].dot(u[:,1]))
 ###############################################################################
 # Initial guess
 ###############################################################################
@@ -151,7 +148,7 @@ prog.SetDecisionVariableValueInVector(h, h_guess, initial_guess)
 ###############################################################################
 # print out a title so we can keep track of multiple experiments
 traj_opt_title = "short 3 loops"
-description = f"""the big one
+description = f"""
 roll_smoothness = {roll_smoothness}
 tether_smoothness = {tether_smoothness}
 power_cost_scale = {power_cost_scale}
