@@ -22,12 +22,13 @@ kite_system = builder.AddSystem(DrakeKite())
 kite_system.set_name("kite")
 
 
-mpc_hz = 5
+mpc_hz = 4
 dt = 1 / mpc_hz
 traj_name = 'strong_opt_400'
 q_ref, qd_ref, qdd_ref, u_ref, h_ref = retime(dt, *load_trajectory('%s.npy' % traj_name))
+
 summarize(traj=(q_ref, qd_ref, qdd_ref, u_ref, h_ref), plot=False)
-mpc_lookahead = 10
+mpc_lookahead = 7
 
 kite_mpc = MPC(mpc_lookahead, (q_ref, qd_ref, qdd_ref, u_ref), dt) # drake mathematical program for mpc
 mpc_controller = MPCDrake(kite_mpc) # Drake system wrapping of our mpc
@@ -68,6 +69,13 @@ controller_context.SetDiscreteState([0])
 simulator = Simulator(diagram, context)
 simulator.AdvanceTo(120)
 
+if not os.path.exists('data/%s' % traj_name):
+    os.mkdir('data/%s')
+np.save('data/%s/%s_sample_times.npy'   % (traj_name, traj_name), logger_kite.sample_times())
+np.save('data/%s/%s_logger_kite.npy'    % (traj_name, traj_name), logger_kite.data())
+np.save('data/%s/%s_logger_control.npy' % (traj_name, traj_name), logger_control.data())
+
+
 (_, T) = logger_kite.data().shape
 W = np.ones([T,3]) * np.array([6, 0, 0])[None,:]
 U = logger_control.data().transpose()
@@ -78,7 +86,8 @@ qd_mpc = X[:,3:]
 ax = plot_3d_trajectory(q_mpc, qd_mpc, show=False)
 plot_3d_trajectory(q_ref, qd_ref, ax=ax)
 
-ref_times = np.cumsum(h_ref) - h_ref[0]
+#ref_times = np.cumsum(h_ref) - h_ref[0]
+ref_times = np.concatenate(([0], np.cumsum(h_ref) - h_ref[0]))
 
 plt.figure()
 plt.plot(ref_times, q_ref[:,:2])
@@ -88,6 +97,7 @@ plt.xlabel('Time (s)')
 plt.ylabel('Angle (rad)')
 plt.title('Kite Angles')
 plt.savefig('kite_angles_%s_%dhz.png' % (traj_name, mpc_hz))
+
 
 plt.figure()
 plt.plot(ref_times, q_ref[:,2])
