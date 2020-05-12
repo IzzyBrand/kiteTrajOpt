@@ -32,7 +32,8 @@ def setup_ax(ax):
 
     ax.set_xlim3d([x_middle - plot_radius, x_middle + plot_radius])
     ax.set_ylim3d([y_middle - plot_radius, y_middle + plot_radius])
-    ax.set_zlim3d([0, 2*plot_radius])
+    ax.set_ylim3d([y_middle - plot_radius, y_middle + plot_radius])
+    # ax.set_zlim3d([0, 2*plot_radius])
 
     # ax.w_xaxis.set_pane_color((0.6, 0.6, 0.6, 1.0))
     # ax.w_yaxis.set_pane_color((0.6, 0.6, 0.6, 1.0))
@@ -124,9 +125,8 @@ def plot_3d_trajectory(q, qd, u=None, ax=None, show=True, title=None):
         cb.set_label('Watts')
     else:
         plt.plot(*p.T)
-
-    ax.scatter(*np.zeros(3),c='k',s=10)
-    ax.plot(*np.vstack([np.zeros(3), p[p.shape[0]//3]]).T, c='grey')
+        ax.scatter(*np.zeros(3),c='k',s=10)
+        ax.plot(*np.vstack([np.zeros(3), p[p.shape[0]//3]]).T, c='grey')
 
     if show:
         setup_ax(ax)

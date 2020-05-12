@@ -127,6 +127,10 @@ def retime(dt, q, qd, qdd, u, h):
         retimed = np.array([np.interp(new_ts, old_ts, traj_dim) \
             for traj_dim in np.atleast_2d(traj[:old_T].T)]).T
 
+        # append the last element to create a loop
+        if traj.shape[0] == old_T + 1:
+            retimed = np.vstack([retimed, traj[-1]])
+
         to_return.append(retimed)
 
     hnew = np.ones(to_return[-1].shape[0])*dt
@@ -157,7 +161,7 @@ def calc_dynamics_error(q, qd, qdd, u, h, w=np.array([6,0,0])):
 
     return error
 
-def summarize(name=None, traj=None, plot=True):
+def summarize(name=None, traj=None, plot=True, plot_power=False):
     """ Load a trajectory, print summary statistics
     You can pass in a trajectory by name or just as a tuple
     """
@@ -170,11 +174,12 @@ def summarize(name=None, traj=None, plot=True):
     print(f'Duration\t{duration}')
     print(f'Power\t{calc_power(qd,u)}')
     print(f'Error\t{calc_dynamics_error(q,qd,qdd,u,h)}')
-    if plot: plot_3d_trajectory(q,qd)
+    if plot:
+        plot_3d_trajectory(q,qd,u=u if plot_power else None)
 
 if __name__ == '__main__':
-    # q,qd,qdd,u,h = load_trajectory('asymmetric_opt_100.npy')
-    q,qd,qdd,u = get_lemniscate_guess_trajectory(800, 3)
-    h=np.array([0])
-    summarize(traj=(q,qd,qdd,u,h), plot=False)
-    plot_3d_trajectory(q,qd, title='T=100 orbit (6.9 W over 29 sec)')
+    q,qd,qdd,u,h = load_trajectory('strong_opt_250.npy')
+    q,qd,qdd,u,h = retime(40/400,q,qd,qdd,u,h)
+    # q,qd,qdd,u = get_lemniscate_guess_trajectory(800, 3)
+    # h=np.array([0])
+    summarize(traj=(q,qd,qdd,u,h), plot=True, plot_power=False)

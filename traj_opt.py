@@ -14,10 +14,10 @@ import sys
 nq = 3
 nu = 2
 # time steps in the trajectory optimization
-T = 40
+T = 200
 # minimum and maximum time interval is seconds
-h_min = 5./T
-h_max = 10./T
+h_min = 10./T
+h_max = 20./T
 w = np.array([6, 0, 0])
 
 symmetric = True
@@ -80,9 +80,12 @@ for t in range(T):
 
 for t in range(T+1):
     prog.AddLinearConstraint(q[t,0] <= np.radians(75)) # stay off the ground
-    prog.AddLinearConstraint(q[t,0] >= np.radians(2)) # stay out of vertical singularity
-    prog.AddLinearConstraint(q[t,2] >= 10) # minimum tether length
-    prog.AddLinearConstraint(q[t,2] <= 60) # maximum tether length
+    prog.AddLinearConstraint(q[t,0] >= np.radians(5)) # stay out of vertical singularity
+    prog.AddLinearConstraint(q[t,1] <= np.radians(80)) # stay behind the anchor
+    prog.AddLinearConstraint(q[t,1] >= -np.radians(80)) # stay behind the anchor
+    prog.AddLinearConstraint(q[t,2] >= 20) # minimum tether length
+    prog.AddLinearConstraint(q[t,2] <= 40) # maximum tether length
+    # prog.AddLinearConstraint(q[t,2] == 40)
 
 if symmetric:
     # the trajectory must be a closed circuit (symmetric)
@@ -98,15 +101,17 @@ else:
 
 # penalize large control inputs and nonsmooth control inputs
 for t in range(T):
-    prog.AddLinearConstraint(u[t,1] <= 0) # you can't push the kite
-    prog.AddLinearConstraint(u[t,1] >= -20) # limit generator torque
+    prog.AddLinearConstraint(u[t,1] <= -0.001) # you can't push the kite
+    prog.AddLinearConstraint(u[t,1] >= -100) # limit generator torque
     prog.AddLinearConstraint(u[t,0] <= np.radians(20))
     prog.AddLinearConstraint(u[t,0] >= -np.radians(20))
 
 
-tether_smoothness = 1. * (T-5)/T # Newtons
-roll_smoothness = 0.1 * (T-5)/T  # radians
-power_cost_scale = 0.1  # watts
+# prog.AddLinearConstraint(q[T//2,1] >= np.radians(30))
+
+tether_smoothness = 0.5 #5. * (T-5)/T # Newtons
+roll_smoothness = 75. #0.5 * (T-5)/T  # radians
+power_cost_scale = 0.5  # watts
 
 # control smoothing constraint
 for t in range(T-1):
@@ -131,11 +136,18 @@ initial_guess = np.empty(prog.num_vars())
 # qd_guess = qd_guess[:T+1]
 # qdd_guess = qdd_guess[:T]
 # u_guess = u_guess[:T]
-q_guess, qd_guess, qdd_guess, u_guess =\
-    get_lemniscate_guess_trajectory(T, num_loops=0.5)
+# q_guess, qd_guess, qdd_guess, u_guess =\
+#     get_lemniscate_guess_trajectory(T, num_loops=0.5)
+
+q_guess, qd_guess, qdd_guess, u_guess, h_guess = retime(20/T,*load_trajectory('strong_opt_250.npy'))
+q_guess = q_guess[:T+1]
+qd_guess = qd_guess[:T+1]
+qdd_guess = qdd_guess[:T]
+u_guess = u_guess[:T]
+h_guess = [h_guess[0]]
 
 # q_guess, qd_guess, qdd_guess, u_guess = get_circle_guess_trajectory(T)
-h_guess = [h_min]
+# h_guess = [h_min]
 
 prog.SetDecisionVariableValueInVector(q, q_guess, initial_guess)
 prog.SetDecisionVariableValueInVector(qd, qd_guess, initial_guess)
@@ -158,7 +170,14 @@ print(description)
 
 # solve mathematical program with initial guess
 prog.SetSolverOption(SolverType.kSnopt, "Print file", "snopt.out")
-prog.SetSolverOption(SolverType.kSnopt, "Major iterations limit", 100000)
+# prog.SetSolverOption(SolverType.kSnopt, "Major iterations limit", 100000)
+# prog.SetSolverOption(SolverType.kSnopt, "Minor iterations limit", 1e12)
+
+# found the iteration limit code here
+# https://github.com/benthomsen/mit-6832-project/blob/master/airplane_system.py
+it_limit = int(max(20000, 50*prog.num_vars()))
+prog.SetSolverOption(SolverType.kSnopt, 'Iterations limit', it_limit)
+
 solver = SnoptSolver()
 result = solver.Solve(prog, initial_guess)
 
@@ -198,28 +217,26 @@ ax.set_title(traj_opt_title) # the title that we printed at the start of the run
 ax.legend()
 
 # # plot the roll control
-# plt.figure()
-# plt.plot(np.degrees(u_guess[:,0]), label='Guess')
-# plt.plot(np.degrees(u_opt[:,0]), label='Opt')
-# plt.xlabel('Timestep')
-# plt.ylabel('Degrees')
-# plt.title('Roll Control')
-# plt.legend()
+fig, (ax1, ax2, ax3) = plt.subplots(1, 3)
+fig.suptitle(traj_opt_title)
+ax1.plot(np.degrees(u_guess[:,0]), label='Guess')
+ax1.plot(np.degrees(u_opt[:,0]), label='Opt')
+ax1.set_xlabel('Timestep')
+ax1.set_ylabel('Degrees')
+ax1.set_title('Roll Control')
 
-# # plot the pitch control
-# plt.figure()
-# plt.plot(u_guess[:,1], label='Guess')
-# plt.plot(u_opt[:,1], label='Opt')
-# plt.xlabel('Timestep')
-# plt.ylabel('Newtons')
-# plt.title('Tether Control')
-# plt.legend()
+# plot the pitch control
+ax2.plot(u_guess[:,1], label='Guess')
+ax2.plot(u_opt[:,1], label='Opt')
+ax2.set_xlabel('Timestep')
+ax2.set_ylabel('Newtons')
+ax2.set_title('Tether Control')
 
 # # plot the power output
-# plt.figure()
-# plt.plot(qd_opt[:-1,2]*u_opt[:,1])
-# plt.title('Power')
+ax3.plot(qd_opt[:-1,2]*u_opt[:,1])
+ax3.set_title('Power')
 
+plt.legend()
 plt.show()
 
 
