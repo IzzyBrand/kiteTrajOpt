@@ -17,8 +17,11 @@ class MPC:
         self.kite = Kite()
         self.dt = dt
         self.gamma = 0.8 # cost decay along trajectory
-        self.pos_weight = 1.
-        self.vel_weight = 0.1
+        self.pos_weight = 1
+        self.vel_weight = 1
+        self.roll_weight = 0
+        self.torque_weight = 0
+        self.terminal_weight = 5 # relative penalty of last timestep compared to the rest
 
     def dynamics(self, args):
         x = args[:nq*2]
@@ -64,7 +67,7 @@ class MPC:
             self.prog.AddConstraint(eq(qd[t+1], qd[t] + self.dt * qdd[t]))
 
             args = np.concatenate((q[t], qd[t], qdd[t], u[t]))
-            # self.prog.AddConstraint(self.dynamics,
+            #self.prog.AddConstraint(self.dynamics,
             #     lb=[0]*nq*2, ub=[0]*nq*2, vars=args)
             #args = np.concatenate((q[t+1], qd[t+1], qdd[t], u[t])) # backward euler
             #self.prog.AddConstraint(self.    dynamics, lb=[0]*nq*2, ub=[0]*nq*2, vars=args)
@@ -87,9 +90,9 @@ class MPC:
         # control input constrinats
         for t in range(self.T):
             self.prog.AddLinearConstraint(u[t,1] <= 0) # you can't push the kite
-            self.prog.AddLinearConstraint(u[t,1] >= -10) # limit generator torque
-            self.prog.AddLinearConstraint(u[t,0] <= np.radians(20))
-            self.prog.AddLinearConstraint(u[t,0] >= -np.radians(20))
+            #self.prog.AddLinearConstraint(u[t,1] >= -20) # limit generator torque
+            #self.prog.AddLinearConstraint(u[t,0] <= np.radians(40))
+            #self.prog.AddLinearConstraint(u[t,0] >= -np.radians(40))
 
         # trajectory starts at the current position
         self.prog.AddLinearConstraint(eq(q[0], q_0))
@@ -120,15 +123,30 @@ class MPC:
         q_error = q[t] - q_ref[ref_t]
         qd_error = qd[t] - qd_ref[ref_t]
 
+        self.prog.AddQuadraticCost(self.roll_weight*u[:,0].dot(u[:,0]))
+        self.prog.AddQuadraticCost(self.torque_weight*u[:,1].dot(u[:,1]))
+
+        #r_discount = 1/100
+
+        # 1 : N - 1, position
         self.prog.AddQuadraticCost(self.pos_weight*q_error[:-1,0].dot(q_error[:-1,0]))
         self.prog.AddQuadraticCost(self.pos_weight*q_error[:-1,1].dot(q_error[:-1,1]))
+        #self.prog.AddQuadraticCost(r_discount * self.pos_weight*q_error[:-1,2].dot(q_error[:-1,2]))
+
+        # 1 : N - 1, Velocity
         self.prog.AddQuadraticCost(self.vel_weight*qd_error[:-1,0].dot(qd_error[:-1,0]))
         self.prog.AddQuadraticCost(self.vel_weight*qd_error[:-1,1].dot(qd_error[:-1,1]))
+        #self.prog.AddQuadraticCost(r_discount * self.vel_weight*qd_error[:-1,2].dot(qd_error[:-1,2]))
 
-        self.prog.AddQuadraticCost(self.pos_weight*10*q_error[-1,0]*q_error[-1,0])
-        self.prog.AddQuadraticCost(self.pos_weight*10*q_error[-1,1]*q_error[-1,1])
-        self.prog.AddQuadraticCost(self.vel_weight*10*qd_error[-1,0]*qd_error[-1,0])
-        self.prog.AddQuadraticCost(self.vel_weight*10*qd_error[-1,1]*qd_error[-1,1])
+        # N, position
+        self.prog.AddQuadraticCost(self.pos_weight*self.terminal_weight*q_error[-1,0]*q_error[-1,0])
+        self.prog.AddQuadraticCost(self.pos_weight*self.terminal_weight*q_error[-1,1]*q_error[-1,1])
+        #self.prog.AddQuadraticCost(r_discount * self.pos_weight*self.terminal_weight*q_error[-1,1]*q_error[-1,1])
+
+        # N, velocity
+        self.prog.AddQuadraticCost(self.vel_weight*self.terminal_weight*qd_error[-1,0]*qd_error[-1,0])
+        self.prog.AddQuadraticCost(self.vel_weight*self.terminal_weight*qd_error[-1,1]*qd_error[-1,1])
+        #self.prog.AddQuadraticCost(r_discount * self.vel_weight*self.terminal_weight*qd_error[-1,2]*qd_error[-1,2])
 
     def set_initial_guess(self, variables, start_t):
         q, qd, qdd, u = variables

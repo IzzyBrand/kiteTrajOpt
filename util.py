@@ -121,11 +121,14 @@ def retime(dt, q, qd, qdd, u, h):
 
     to_return = []
 
-    for traj in [q, qd, qdd, u, h]:
+    for traj in [q, qd, qdd, u]:
         retimed = np.array([np.interp(new_ts, old_ts, traj_dim) \
             for traj_dim in np.atleast_2d(traj[:old_T].T)]).T
 
         to_return.append(retimed)
+
+    hnew = np.ones(to_return[-1].shape[0])*dt
+    to_return.append(hnew)
 
     return to_return
 
