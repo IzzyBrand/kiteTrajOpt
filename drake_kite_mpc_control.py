@@ -119,7 +119,7 @@ plt.savefig('tether_rate_%s_%dhz.png' % (traj_name, mpc_hz))
 
 
 plt.figure()
-plt.plot(ref_times, u_ref[:,0])
+plt.plot(ref_times[:-1], u_ref[:,0])
 plt.plot(logger_kite.sample_times(), U[:,0])
 plt.legend(['roll_ref', 'roll_real'])
 plt.title('Kite Roll')
@@ -128,7 +128,7 @@ plt.ylabel('Kite Roll (rad)')
 plt.savefig('roll_%s_%dhz.png' % (traj_name, mpc_hz))
 
 plt.figure()
-plt.plot(ref_times, u_ref[:,1])
+plt.plot(ref_times[:-1], u_ref[:,1])
 plt.plot(logger_kite.sample_times(), U[:,1])
 plt.legend(['torque_ref', 'torque_real'])
 plt.title('Tether Tension')
