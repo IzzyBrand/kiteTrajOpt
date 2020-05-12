@@ -168,7 +168,7 @@ def summarize(name=None, traj=None, plot=True):
     if plot: plot_3d_trajectory(q,qd)
 
 if __name__ == '__main__':
-    q,qd,qdd,u,h = load_trajectory('med_opt_300.npy')
+    q,qd,qdd,u,h = load_trajectory('asymmetric_opt_100.npy')
     # q,qd,_,u = get_lemniscate_guess_trajectory(800, 3)
-    print(calc_power(qd,u))
-    plot_3d_trajectory(q,qd)
+    summarize(traj=(q,qd,qdd,u,h), plot=False)
+    plot_3d_trajectory(q,qd, title='T=100 orbit (6.9 W over 29 sec)')

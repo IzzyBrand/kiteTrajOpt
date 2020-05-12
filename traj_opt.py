@@ -14,11 +14,13 @@ import sys
 nq = 3
 nu = 2
 # time steps in the trajectory optimization
-T = 50
+T = 40
 # minimum and maximum time interval is seconds
 h_min = 5./T
-h_max = 20./T
+h_max = 10./T
 w = np.array([6, 0, 0])
+
+symmetric=False
 
 ###############################################################################
 # Set up the mathematical program
@@ -82,17 +84,17 @@ for t in range(T+1):
     prog.AddLinearConstraint(q[t,2] >= 10) # minimum tether length
     prog.AddLinearConstraint(q[t,2] <= 60) # maximum tether length
 
-
-# the trajectory must be a closed circuit (symmetric)
-prog.AddLinearConstraint(q[0,1] == 0)
-prog.AddLinearConstraint(eq(q[0], q[-1]))
-prog.AddLinearConstraint(qd[0,0] == qd[-1,0])
-prog.AddLinearConstraint(qd[0,1] == -qd[-1,1])
-prog.AddLinearConstraint(qd[0,2] == qd[-1,2])
-
-# the trajectory must be a closed circuit (not symmetric)
-# prog.AddLinearConstraint(eq(q[0], q[-1]))
-# prog.AddLinearConstraint(eq(qd[0], qd[-1]))
+if symmetric:
+    # the trajectory must be a closed circuit (symmetric)
+    prog.AddLinearConstraint(q[0,1] == 0)
+    prog.AddLinearConstraint(eq(q[0], q[-1]))
+    prog.AddLinearConstraint(qd[0,0] == qd[-1,0])
+    prog.AddLinearConstraint(qd[0,1] == -qd[-1,1])
+    prog.AddLinearConstraint(qd[0,2] == qd[-1,2])
+else:
+    # the trajectory must be a closed circuit (not symmetric)
+    prog.AddLinearConstraint(eq(q[0], q[-1]))
+    prog.AddLinearConstraint(eq(qd[0], qd[-1]))
 
 # penalize large control inputs and nonsmooth control inputs
 for t in range(T):
@@ -102,18 +104,19 @@ for t in range(T):
     prog.AddLinearConstraint(u[t,0] >= -np.radians(20))
 
 
-tether_smoothness = 0.75 * (T-5)/T # Newtons
-roll_smoothness = 0.75 * (T-5)/T  # radians
-power_cost_scale = 0.1  # watts
+tether_smoothness = 2. * (T-5)/T # Newtons
+roll_smoothness = 0.2 * (T-5)/T  # radians
+power_cost_scale = 0.001  # watts
 
 # control smoothing constraint
 for t in range(T-1):
     prog.AddQuadraticCost(roll_smoothness*(u[t+1, 0] - u[t, 0])*(u[t+1, 0] - u[t, 0]))
     prog.AddQuadraticCost(tether_smoothness*(u[t+1, 1] - u[t, 1])*(u[t+1, 1] - u[t, 1]))
 
-# control smoothing constraint across the last timestep (for symmetric trajectory)
-prog.AddQuadraticCost(roll_smoothness*(u[0, 0] + u[-1, 0])*(u[0, 0] + u[-1, 0]))
-prog.AddQuadraticCost(tether_smoothness*(u[0, 1] - u[-1, 1])*(u[0, 1] - u[-1, 1]))
+if symmetric:
+    # control smoothing constraint across the last timestep (for symmetric trajectory)
+    prog.AddQuadraticCost(roll_smoothness*(u[0, 0] + u[-1, 0])*(u[0, 0] + u[-1, 0]))
+    prog.AddQuadraticCost(tether_smoothness*(u[0, 1] - u[-1, 1])*(u[0, 1] - u[-1, 1]))
 
 # power generation costs
 prog.AddQuadraticCost(power_cost_scale * qd[:-1,2].dot(u[:,1]))
@@ -132,7 +135,7 @@ initial_guess = np.empty(prog.num_vars())
 # qdd_guess = qdd_guess[:T]
 # u_guess = u_guess[:T]
 q_guess, qd_guess, qdd_guess, u_guess =\
-    get_lemniscate_guess_trajectory(T, num_loops=0.5)
+    get_lemniscate_guess_trajectory(T, num_loops=1)
 
 # q_guess, qd_guess, qdd_guess, u_guess = get_circle_guess_trajectory(T)
 h_guess = [h_min]
@@ -175,9 +178,10 @@ qdd_opt = result.GetSolution(qdd)
 u_opt = result.GetSolution(u)
 
 # mirror the results for viewing
-q_opt, qd_opt, qdd_opt, u_opt = create_mirrored_loop(q_opt, qd_opt, qdd_opt, u_opt)
-q_guess, qd_guess, qdd_guess, u_guess = create_mirrored_loop(q_guess, qd_guess, qdd_guess, u_guess)
-T *= 2
+if symmetric:
+    q_opt, qd_opt, qdd_opt, u_opt = create_mirrored_loop(q_opt, qd_opt, qdd_opt, u_opt)
+    q_guess, qd_guess, qdd_guess, u_guess = create_mirrored_loop(q_guess, qd_guess, qdd_guess, u_guess)
+    T *= 2
 
 print(f'Duration: {T*h_opt}')
 print(f'Power: {qd_opt[:-1,2].dot(u_opt[:,1])/T}')

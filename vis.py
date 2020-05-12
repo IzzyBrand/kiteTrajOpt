@@ -1,21 +1,51 @@
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 import numpy as np
-
 from simple_kite_dynamics import Kite
 # TODO: this shouldn't be in the global scope. wrap in a class
 kite = Kite()
 
+
 def setup_ax(ax):
+    '''Make axes of 3D plot have equal scale so that spheres appear as spheres,
+    cubes as cubes, etc..  This is one possible solution to Matplotlib's
+    ax.set_aspect('equal') and ax.axis('equal') not working for 3D.
+
+    Input
+      ax: a matplotlib axis, e.g., as output from plt.gca().
+    '''
+
+    x_limits = ax.get_xlim3d()
+    y_limits = ax.get_ylim3d()
+    z_limits = ax.get_zlim3d()
+
+    x_range = abs(x_limits[1] - x_limits[0])
+    x_middle = np.mean(x_limits)
+    y_range = abs(y_limits[1] - y_limits[0])
+    y_middle = np.mean(y_limits)
+    z_range = abs(z_limits[1] - z_limits[0])
+    z_middle = np.mean(z_limits)
+
+    # The plot bounding box is a sphere in the sense of the infinity
+    # norm, hence I call half the max range the plot radius.
+    plot_radius = 0.5*max([x_range, y_range, z_range])
+
+    ax.set_xlim3d([x_middle - plot_radius, x_middle + plot_radius])
+    ax.set_ylim3d([y_middle - plot_radius, y_middle + plot_radius])
+    ax.set_zlim3d([0, 2*plot_radius])
+
+    # ax.w_xaxis.set_pane_color((0.6, 0.6, 0.6, 1.0))
+    # ax.w_yaxis.set_pane_color((0.6, 0.6, 0.6, 1.0))
+    # ax.w_zaxis.set_pane_color((0.6, 0.6, 0.6, 1.0))
+    # ax.grid(False)
+
+
     ax.set_xlabel('X (m)')
     ax.set_ylabel('Y (m)')
     ax.set_zlabel('Z (m)')
 
-    # TODO: set aspect ratio
-    # TODO: this should be related to the max tether length
-    ax.set_xlim(-5, 60)
-    ax.set_ylim(-60, 60)
-    ax.set_zlim(-5, 60)
+
+    ax.set_title('Kite trajectory')
 
 def plot(ax, x, u, w):
     # get the kite state
@@ -76,7 +106,7 @@ def animate_trajectory(X, U, W, save_file=None):
 
         line_ani.save(save_file, writer=writer)
 
-def plot_3d_trajectory(q, qd, u=None, ax=None, show=True):
+def plot_3d_trajectory(q, qd, u=None, ax=None, show=True, title=None):
     kite = Kite()
     p = np.array([kite.p(x) for x in np.hstack([q, qd])])
 
@@ -87,14 +117,21 @@ def plot_3d_trajectory(q, qd, u=None, ax=None, show=True):
     # we need to use a scatterplot to have color
     if u is not None:
         ts = np.arange(p.shape[0]) % u.shape[0]
-        power = qd[:,2] * u[ts,1]
-        power = power / np.abs(power).max()/2 + 0.5
-        color = plt.cm.jet(power)
-        ax.scatter(*p.T, color=color)
+        power = -qd[:,2] * u[ts,1]
+        c_rng = np.max(np.abs(power))
+        p = ax.scatter(*p.T, c=power, cmap='seismic', vmin=-c_rng, vmax=c_rng)
+        cb = fig.colorbar(p)
+        cb.set_label('Watts')
     else:
         plt.plot(*p.T)
 
+    ax.scatter(*np.zeros(3),c='k',s=10)
+    ax.plot(*np.vstack([np.zeros(3), p[p.shape[0]//3]]).T, c='grey')
+
     if show:
+        setup_ax(ax)
+        if title is not None:
+            ax.set_title(title)#, pad=40)
         plt.show()
     if not show:
         return ax

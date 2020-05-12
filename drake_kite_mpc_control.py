@@ -45,11 +45,11 @@ logger_control = LogOutput(controller.get_output_port(0), builder)
 logger_control.set_name("control_logger")
 
 diagram = builder.Build()
-diagram.set_name("diagram")
+diagram.set_name("Kite MPC Diagram")
 
-# plt.figure()
-# plot_system_graphviz(diagram, max_depth=2)
-# plt.show()
+plt.figure()
+plot_system_graphviz(diagram, max_depth=2)
+plt.show()
 
 
 x0 = np.concatenate([q_ref[0], qd_ref[0]])
