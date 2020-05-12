@@ -17,7 +17,7 @@ class MPCDrake(LeafSystem):
         LeafSystem.__init__(self)
 
         self.mpc = mpc
-        self.U = np.zeros([1,2])
+        self.U = np.zeros([2,2])
 
         period = mpc.dt
 
@@ -40,7 +40,8 @@ class MPCDrake(LeafSystem):
 
     def Output(self, context, output):
         x = context.get_discrete_state_vector().CopyToVector()
-        output.SetFromVector(self.U[0])
+        #output.SetFromVector((self.U[0] + self.U[1])/2.)
+        output.SetFromVector((self.U[0])/2.)
 
 if __name__ == '__main__':
     builder = DiagramBuilder()
