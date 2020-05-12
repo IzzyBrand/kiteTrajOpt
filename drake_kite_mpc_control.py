@@ -66,7 +66,7 @@ controller_context = diagram.GetMutableSubsystemContext(controller, context)
 controller_context.SetDiscreteState([0])
 
 simulator = Simulator(diagram, context)
-simulator.AdvanceTo(15)
+simulator.AdvanceTo(17)
 
 (_, T) = logger_kite.data().shape
 W = np.ones([T,3]) * np.array([6, 0, 0])[None,:]
@@ -79,20 +79,57 @@ ax = plot_3d_trajectory(q_mpc, qd_mpc, show=False)
 plot_3d_trajectory(q_ref, qd_ref, ax=ax)
 
 ref_times = np.cumsum(h_ref)
-plt.figure()
-plt.plot(ref_times, q_ref)
-plt.plot(logger_kite.sample_times(), logger_kite.data().transpose()[:,:3])
-plt.legend(['theta_ref','phi_ref', 'r_ref', 'theta', 'phi', 'r'])
 
 plt.figure()
-plt.plot(ref_times, qd_ref)
-plt.plot(logger_kite.sample_times(), logger_kite.data().transpose()[:,3:])
-plt.legend(['thetadot_ref', 'phidot_ref', 'rdot_ref', 'thetadot', 'phidot', 'rdot'])
+plt.plot(ref_times, q_ref[:,:2])
+plt.plot(logger_kite.sample_times(), logger_kite.data().transpose()[:,:2])
+plt.legend(['theta_ref','phi_ref', 'theta', 'phi'])
+plt.xlabel('Time (s)')
+plt.ylabel('Angle (rad)')
+plt.title('Kite Angles')
 
 plt.figure()
-plt.plot(ref_times, u_ref)
-plt.plot(logger_kite.sample_times(), U)
-plt.legend(['roll_ref', 'torque_ref', 'roll_real', 'torque_real'])
+plt.plot(ref_times, q_ref[:,2])
+plt.plot(logger_kite.sample_times(), logger_kite.data().transpose()[:,2])
+plt.legend(['r_ref', 'r'])
+plt.xlabel('Time (s)')
+plt.ylabel('Kite Distance (m)')
+plt.title('Kite Tether Length')
+
+
+plt.figure()
+plt.plot(ref_times, qd_ref[:,:2])
+plt.plot(logger_kite.sample_times(), logger_kite.data().transpose()[:,3:5])
+plt.legend(['thetadot_ref', 'phidot_ref', 'thetadot', 'phidot'])
+plt.title('Angular Velocities')
+plt.xlabel('Time(s)')
+plt.ylabel('Angular Velocity (rad/s)')
+
+plt.figure()
+plt.plot(ref_times, qd_ref[:,2])
+plt.plot(logger_kite.sample_times(), logger_kite.data().transpose()[:,5])
+plt.legend(['rdot_ref', 'rdot'])
+plt.title('Generator Tension Force')
+plt.xlabel('Time(s)')
+plt.ylabel('Tether rate (m/s)')
+
+
+plt.figure()
+plt.plot(ref_times, u_ref[:,0])
+plt.plot(logger_kite.sample_times(), U[:,0])
+plt.legend(['roll_ref', 'roll_real'])
+plt.title('Kite Roll')
+plt.xlabel('Time(s)')
+plt.ylabel('Tether Angle (rad)')
+
+plt.figure()
+plt.plot(ref_times, u_ref[:,1])
+plt.plot(logger_kite.sample_times(), U[:,1])
+plt.legend(['torque_ref', 'torque_real'])
+plt.title('Tether Tension')
+plt.xlabel('Time(s)')
+plt.ylabel('Tether Tension (N)')
+
 plt.show()
 
 # animate_trajectory(X, U, W)
