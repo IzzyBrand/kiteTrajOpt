@@ -21,7 +21,7 @@ class MPC:
         self.vel_weight = 1
         self.roll_weight = 0
         self.torque_weight = 0
-        self.terminal_weight = 5 # relative penalty of last timestep compared to the rest
+        self.terminal_weight = 1 # relative penalty of last timestep compared to the rest
 
     def dynamics(self, args):
         x = args[:nq*2]
@@ -67,15 +67,15 @@ class MPC:
             self.prog.AddConstraint(eq(qd[t+1], qd[t] + self.dt * qdd[t]))
 
             args = np.concatenate((q[t], qd[t], qdd[t], u[t]))
-            #self.prog.AddConstraint(self.dynamics,
-            #     lb=[0]*nq*2, ub=[0]*nq*2, vars=args)
+            self.prog.AddConstraint(self.dynamics,
+                 lb=[0]*nq*2, ub=[0]*nq*2, vars=args)
             #args = np.concatenate((q[t+1], qd[t+1], qdd[t], u[t])) # backward euler
             #self.prog.AddConstraint(self.    dynamics, lb=[0]*nq*2, ub=[0]*nq*2, vars=args)
 
-            ref_t = (t + start_t) % self.ref_T
-            x_ref = np.concatenate((q_ref[ref_t], qd_ref[ref_t]))
-            qdd_lin = self.linear_dynamics(args, x_ref, u_ref[ref_t])
-            self.prog.AddLinearConstraint(eq(qdd_lin, qdd[t]))
+            #ref_t = (t + start_t) % self.ref_T
+            #x_ref = np.concatenate((q_ref[ref_t], qd_ref[ref_t]))
+            #qdd_lin = self.linear_dynamics(args, x_ref, u_ref[ref_t])
+            #self.prog.AddLinearConstraint(eq(qdd_lin, qdd[t]))
 
             #self.prog.AddConstraint(eq(q[t+1], q[t] + self.dt * qd[t+1])) # backward euler
             #self.prog.AddConstraint(eq(qd[t+1], qd[t] + self.dt * qdd[t])) # backward euler
@@ -123,10 +123,13 @@ class MPC:
         q_error = q[t] - q_ref[ref_t]
         qd_error = qd[t] - qd_ref[ref_t]
 
-        self.prog.AddQuadraticCost(self.roll_weight*u[:,0].dot(u[:,0]))
-        self.prog.AddQuadraticCost(self.torque_weight*u[:,1].dot(u[:,1]))
+        #self.prog.AddQuadraticCost(self.roll_weight*u[:,0].dot(u[:,0]))
+        #self.prog.AddQuadraticCost(self.torque_weight*u[:,1].dot(u[:,1]))
 
-        #r_discount = 1/100
+        r_discount = 1/100
+        #for ix in range(self.T-1):
+            #self.prog.AddQuadraticCost((u[ix+1,0] - u[ix,0])*(u[ix+1,0] - u[ix,0]))
+            #self.prog.AddQuadraticCost(.01*(u[ix+1,1] - u[ix,1])*(u[ix+1,1] - u[ix,1]))
 
         # 1 : N - 1, position
         self.prog.AddQuadraticCost(self.pos_weight*q_error[:-1,0].dot(q_error[:-1,0]))
@@ -136,7 +139,7 @@ class MPC:
         # 1 : N - 1, Velocity
         self.prog.AddQuadraticCost(self.vel_weight*qd_error[:-1,0].dot(qd_error[:-1,0]))
         self.prog.AddQuadraticCost(self.vel_weight*qd_error[:-1,1].dot(qd_error[:-1,1]))
-        #self.prog.AddQuadraticCost(r_discount * self.vel_weight*qd_error[:-1,2].dot(qd_error[:-1,2]))
+        self.prog.AddQuadraticCost(r_discount * self.vel_weight*qd_error[:-1,2].dot(qd_error[:-1,2]))
 
         # N, position
         self.prog.AddQuadraticCost(self.pos_weight*self.terminal_weight*q_error[-1,0]*q_error[-1,0])
