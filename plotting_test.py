@@ -5,6 +5,7 @@ import matplotlib.animation as animation
 from util import load_trajectory, calc_power
 from simple_kite_dynamics import Kite
 from vis import setup_ax
+import sys
 
 
 def set_3d_data(line, data):
@@ -49,7 +50,7 @@ fig = plt.figure()
 ax = fig.gca(projection='3d')
 
 # load in the trajectory and preprocess to get euclidean p
-q, qd, qdd, u, h = load_trajectory('opt_120.npy')
+q, qd, qdd, u, h = load_trajectory(sys.argv[1])
 print(calc_power(qd, u))
 
 kite = Kite()
@@ -63,10 +64,10 @@ for data in get_data(traj, T-1):
     lines.extend(ax.plot(*data.T))
 
 
-setup(ax)
+setup_ax(ax)
 
 # Creating the Animation object
 line_ani = animation.FuncAnimation(fig, update, T, fargs=(traj, lines),
-                                   interval=50, blit=False)
+                                   interval=30, blit=False)
 
 plt.show()

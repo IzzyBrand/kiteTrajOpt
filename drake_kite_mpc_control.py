@@ -24,7 +24,7 @@ kite_system.set_name("kite")
 
 mpc_hz = 4
 dt = 1 / mpc_hz
-traj_name = 'strong_opt_400'
+traj_name = 'strong_opt_200'
 q_ref, qd_ref, qdd_ref, u_ref, h_ref = retime(dt, *load_trajectory('%s.npy' % traj_name))
 
 summarize(traj=(q_ref, qd_ref, qdd_ref, u_ref, h_ref), plot=False)

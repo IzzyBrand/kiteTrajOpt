@@ -14,7 +14,7 @@ import sys
 nq = 3
 nu = 2
 # time steps in the trajectory optimization
-T = 300
+T = 50
 # minimum and maximum time interval is seconds
 h_min = 10./T
 h_max = 30./T
@@ -29,8 +29,8 @@ symmetric = True
 prog = MathematicalProgram()
 # vector of the time intervals
 # (distances between the T + 1 break points)
-h = [30/T]
-# h = prog.NewContinuousVariables(1, name='h')
+# h = [30/T]
+h = prog.NewContinuousVariables(1, name='h')
 # system configuration, generalized velocities, and accelerations
 q = prog.NewContinuousVariables(rows=T+1, cols=nq, name='q')
 qd = prog.NewContinuousVariables(rows=T+1, cols=nq, name='qd')
@@ -42,7 +42,7 @@ u = prog.NewContinuousVariables(rows=T, cols=nu, name='u')
 # Add constraints
 ###############################################################################
 # lower and upper bound on the time steps for all t
-# prog.AddBoundingBoxConstraint([h_min], [h_max], h)
+prog.AddBoundingBoxConstraint([h_min], [h_max], h)
 
 # dynamics equations for all t (implicit Euler)
 kite = Kite()
@@ -81,7 +81,7 @@ for t in range(T):
 
 for t in range(T+1):
     prog.AddLinearConstraint(q[t,0] <= np.radians(75)) # stay off the ground
-    prog.AddLinearConstraint(q[t,0] >= np.radians(5)) # stay out of vertical singularity
+    prog.AddLinearConstraint(q[t,0] >= np.radians(20)) # stay out of vertical singularity
     prog.AddLinearConstraint(q[t,1] <= np.radians(80)) # stay behind the anchor
     prog.AddLinearConstraint(q[t,1] >= -np.radians(80)) # stay behind the anchor
     prog.AddLinearConstraint(q[t,2] >= 20) # minimum tether length
@@ -132,7 +132,8 @@ prog.AddQuadraticCost(power_cost_scale * qd[:-1,2].dot(u[:,1]))
 initial_guess = np.empty(prog.num_vars())
 
 
-# q_guess, qd_guess, qdd_guess, u_guess, h_guess = retime(20/T,*load_trajectory('strong_opt_250.npy'))
+# q_guess, qd_guess, qdd_guess, u_guess, h_guess = retime(20/T,*load_trajectory('strong_opt_400.npy'))
+# q_guess, qd_guess, qdd_guess, u_guess, h_guess = load_trajectory('strong_opt_400.npy')
 # q_guess = q_guess[:T+1]
 # qd_guess = qd_guess[:T+1]
 # qdd_guess = qdd_guess[:T]
@@ -144,14 +145,14 @@ initial_guess = np.empty(prog.num_vars())
 
 
 q_guess, qd_guess, qdd_guess, u_guess =\
-    get_lemniscate_guess_trajectory(T, num_loops=1.5)
-# h_guess = [h_min]
+    get_lemniscate_guess_trajectory(T, num_loops=0.5)
+h_guess = [h_min]
 
 prog.SetDecisionVariableValueInVector(q, q_guess, initial_guess)
 prog.SetDecisionVariableValueInVector(qd, qd_guess, initial_guess)
 prog.SetDecisionVariableValueInVector(qdd, qdd_guess, initial_guess)
 prog.SetDecisionVariableValueInVector(u, u_guess, initial_guess)
-# prog.SetDecisionVariableValueInVector(h, h_guess, initial_guess)
+prog.SetDecisionVariableValueInVector(h, h_guess, initial_guess)
 
 ###############################################################################
 # Solve and get the solution
@@ -185,8 +186,8 @@ print(result.get_solution_result())
 print(result.get_solver_details().info)
 
 # get optimal solution
-h_opt = h
-# h_opt = result.GetSolution(h)
+# h_opt = h
+h_opt = result.GetSolution(h)
 q_opt = result.GetSolution(q)
 qd_opt = result.GetSolution(qd)
 qdd_opt = result.GetSolution(qdd)

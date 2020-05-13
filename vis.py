@@ -124,6 +124,7 @@ def plot_3d_trajectory(q, qd, u=None, ax=None, show=True, title=None):
         cb = fig.colorbar(p)
         cb.set_label('Watts')
     else:
+        # plt.tight_layout()
         plt.plot(*p.T)
         ax.scatter(*np.zeros(3),c='k',s=10)
         ax.plot(*np.vstack([np.zeros(3), p[p.shape[0]//3]]).T, c='grey')

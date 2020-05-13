@@ -180,9 +180,10 @@ if __name__ == '__main__':
 
     kite = Kite()
     xdot = kite.f(x,u)
-    for i, v in enumerate(x.ravel()):
-        for j, vdot in enumerate(xdot[3:,].ravel()):
-            print(i,j, vdot.Differentiate(v))
+    print(xdot)
+    # for i, v in enumerate(x.ravel()):
+    #     for j, vdot in enumerate(xdot[3:,].ravel()):
+    #         print(i,j, vdot.Differentiate(v))
     # print(sym.Jacobian(xdot, x))
 
 
